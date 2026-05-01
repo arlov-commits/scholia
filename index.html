@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v2.5 -->
+<!-- v2.6 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v2.5">
+<meta name="version" content="v2.6">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -463,12 +463,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v2.5</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v2.6</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v2.5
+   SCHOLIA — Academic Editor v2.6
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -1210,6 +1210,13 @@ function handleKeyDown(e) {
   }
   if ((e.ctrlKey || e.metaKey) && e.key === '0') {
     e.preventDefault(); editorSize = 18; applyFontSize(); return;
+  }
+  // Ctrl+S → immediate save
+  if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S') && !e.shiftKey && !e.altKey) {
+    e.preventDefault();
+    clearTimeout(_saveTimer);
+    saveState();
+    return;
   }
   // Bold/italic/underline → wrap in markdown markers
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {

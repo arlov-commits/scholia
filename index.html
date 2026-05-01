@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v2.2 -->
+<!-- v2.3 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v2.2">
+<meta name="version" content="v2.3">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -395,12 +395,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v2.2</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v2.3</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v2.2
+   SCHOLIA — Academic Editor v2.3
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -1024,6 +1024,7 @@ function pushUndo(snap) {
   undoStack.push(snap);
   if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
   redoStack = [];
+  scheduleSave();
 }
 function restoreSnapshot(snap) {
   editor.innerHTML = '';
@@ -1674,6 +1675,113 @@ function sanitizeForPaste(root) {
   process(root);
 }
 
+/* ---------- State Management ---------- */
+const STORAGE_KEY = 'scholia_v1';
+
+function genId() {
+  return Math.random().toString(36).slice(2, 10);
+}
+
+function slugify(name) {
+  return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'tab';
+}
+
+function captureTabState(tab) {
+  tab.lines = Array.from(editor.children).map(d => ({
+    src: getLineSource(d),
+    indent: getIndent(d)
+  }));
+  const sel = window.getSelection();
+  let caretLine = 0, caretOffset = 0;
+  if (sel.rangeCount) {
+    const lineDiv = getLineDiv(sel.getRangeAt(0).startContainer);
+    if (lineDiv) {
+      caretLine = Array.from(editor.children).indexOf(lineDiv);
+      caretOffset = getCaretOffsetInLine(lineDiv);
+    }
+  }
+  tab.caretLine = caretLine;
+  tab.caretOffset = caretOffset;
+  tab.scrollTop = editor.scrollTop;
+}
+
+function applyTabState(tab) {
+  editor.innerHTML = '';
+  const lines = tab.lines && tab.lines.length ? tab.lines : [{ src: '', indent: 0 }];
+  lines.forEach(l => {
+    const d = document.createElement('div');
+    setIndent(d, l.indent || 0);
+    setLineSource(d, l.src || '');
+    editor.appendChild(d);
+  });
+  ensureLine();
+  renderAll();
+  const cl = tab.caretLine || 0;
+  if (editor.children[cl]) {
+    setCaretOffsetInLine(editor.children[cl], tab.caretOffset || 0);
+  }
+  editor.scrollTop = tab.scrollTop || 0;
+}
+
+let appTabs = [];
+let activeTabId = null;
+
+function getActiveTab() {
+  return appTabs.find(t => t.id === activeTabId) || appTabs[0];
+}
+
+function saveState() {
+  const tab = getActiveTab();
+  if (tab) captureTabState(tab);
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      version: 1,
+      tabs: appTabs,
+      activeTabId,
+      editorSize
+    }));
+  } catch (e) {}
+}
+
+// var (not let) so it's hoisted — scheduleSave() may be called before this line executes
+var _saveTimer;
+function scheduleSave() {
+  clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(saveState, 600);
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const state = JSON.parse(raw);
+    if (!state || !Array.isArray(state.tabs) || !state.tabs.length) return false;
+    appTabs = state.tabs;
+    activeTabId = state.activeTabId || appTabs[0].id;
+    if (typeof state.editorSize === 'number') {
+      editorSize = state.editorSize;
+      applyFontSize();
+    }
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function createDefaultTab() {
+  const tab = {
+    id: genId(),
+    name: 'Main',
+    slug: 'main',
+    lines: [{ src: '', indent: 0 }],
+    caretLine: 0,
+    caretOffset: 0,
+    scrollTop: 0
+  };
+  appTabs = [tab];
+  activeTabId = tab.id;
+}
+
 /* ---------- Toolbar ---------- */
 document.getElementById('toolbar').addEventListener('mousedown', (e) => {
   const btn = e.target.closest('.tb-btn');
@@ -1695,7 +1803,11 @@ document.getElementById('toolbar').addEventListener('mousedown', (e) => {
 });
 
 /* ---------- Init ---------- */
-renderAll();
+if (!loadState()) createDefaultTab();
+applyTabState(getActiveTab());
+undoStack = [];
+redoStack = [];
+pushUndo();
 editor.focus();
 </script>
 </body>

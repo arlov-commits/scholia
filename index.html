@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v3.3 -->
+<!-- v3.1+v3.3merge -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v3.3">
+<meta name="version" content="v3.1+v3.3merge">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -217,38 +217,7 @@
     border-color: rgba(201,168,106,0.3);
     color: var(--chrome-accent);
   }
-  .tab.dragging { opacity: 0.4; }
-  .tab.drag-over { box-shadow: 2px 0 0 0 var(--chrome-accent); }
-  .tab.drag-over-after { box-shadow: -2px 0 0 0 var(--chrome-accent); }
 
-  .tab-ctx-menu {
-    position: fixed;
-    background: #2a2520;
-    border: 1px solid #0c0a08;
-    border-radius: 4px;
-    padding: 4px 0;
-    min-width: 130px;
-    font-family: 'Inter', sans-serif;
-    font-size: 12px;
-    color: var(--chrome-fg);
-    box-shadow: 0 6px 18px rgba(0,0,0,0.5);
-    z-index: 200;
-  }
-  .tab-ctx-menu button {
-    display: block;
-    width: 100%;
-    padding: 6px 14px;
-    text-align: left;
-    background: transparent;
-    border: none;
-    color: inherit;
-    font: inherit;
-    cursor: pointer;
-  }
-  .tab-ctx-menu button:hover {
-    background: rgba(201,168,106,0.15);
-    color: var(--chrome-accent);
-  }
   .stage {
     position: absolute;
     top: 86px; bottom: 28px; left: 0; right: 0;
@@ -455,6 +424,7 @@
   }
   .stage::-webkit-scrollbar-thumb:hover { background: rgba(201, 168, 106, 0.35); }
 </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -499,12 +469,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v3.3</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v3.1+v3.3merge</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v3.3
+   SCHOLIA — Academic Editor v3.1+v3.3merge
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -877,81 +847,40 @@ function detectHeader(src) {
   return { level: i, contentStart: i, contentEnd };
 }
 
-/* Compute whether src ends still inside an unclosed /* ... */ given the
-   in-code state at the start. Used to propagate code state across lines. */
-function endsInCodeBlock(src, startInCode) {
-  let inCode = startInCode;
-  let i = 0;
-  while (i < src.length) {
-    if (inCode) {
-      if (src[i] === '*' && src[i+1] === '/') { inCode = false; i += 2; continue; }
-      i++;
-    } else {
-      if (src[i] === '\\' && i + 1 < src.length) { i += 2; continue; }
-      if (src[i] === '/' && src[i+1] === '*') { inCode = true; i += 2; continue; }
-      i++;
-    }
-  }
-  return inCode;
-}
-
-/* ---------- Tokenize one line ----------
-   startInCode: true if previous line left an unclosed /* code comment. */
-function tokenizeLineHTML(lineDiv, startInCode) {
-  lineDiv.classList.remove('line-h', 'line-h1', 'line-h2', 'line-h3', 'line-h4', 'line-h5', 'line-in-code');
+/* ---------- Tokenize one line ---------- */
+function tokenizeLineHTML(lineDiv) {
+  lineDiv.classList.remove('line-h', 'line-h1', 'line-h2', 'line-h3', 'line-h4', 'line-h5');
   const src = getLineSource(lineDiv);
-  if (src === '') {
-    return { html: '<br>', endInCode: startInCode };
-  }
+  if (src === '') return '<br>';
 
-  // Continuation of multi-line /* */ from previous line
-  if (startInCode) {
-    lineDiv.classList.add('line-in-code');
-    const closeIdx = src.indexOf('*/');
-    if (closeIdx === -1) {
-      // Entire line is inside the open code block
-      const html = `<span class="cmt cmt-code" data-cmt="1">${escapeHtml(src)}</span>`;
-      return { html, endInCode: true };
-    }
-    const codePart = `<span class="cmt cmt-code" data-cmt="1">${escapeHtml(src.slice(0, closeIdx))}<span class="marker marker-close">*/</span></span>`;
-    // Tokenize the remainder with normal rules
-    const restSrc = src.slice(closeIdx + 2);
-    if (restSrc === '') {
-      return { html: codePart, endInCode: false };
-    }
-    // Recurse-ish: build a "virtual" prefix-stripped version. To reuse
-    // header/bullet detection cleanly we just render the rest as body.
-    const restHtml = tokenizeBody(src, closeIdx + 2, src.length);
-    const endInCode = endsInCodeBlock(restSrc, false);
-    return { html: codePart + restHtml, endInCode };
-  }
-
-  let html;
   // \# at line start: escaped header — render # literally, no header detection
   if (src[0] === '\\' && src.length > 1 && src[1] === '#') {
-    html = escapeHtml('#') + tokenizeBody(src, 2, src.length);
-  } else {
-    const hdr = detectHeader(src);
-    if (hdr) {
-      lineDiv.classList.add('line-h', `line-h${hdr.level}`);
-      const hashes = '#'.repeat(hdr.level);
-      const inner = tokenizeBody(src, hdr.contentStart, hdr.contentEnd);
-      const trailing = hdr.contentEnd < src.length
-        ? `<span class="h-mark">${'#'}</span>` : '';
-      html = `<span class="h-mark">${hashes}</span><span class="h${hdr.level}">${inner}</span>${trailing}`;
-    } else if (src.length >= 2 && isBulletChar(src[0]) && src[1] === ' ') {
-      html = `<span class="bullet">${src[0]}</span> ${tokenizeBody(src, 2, src.length)}`;
-    } else {
-      const nm = src.match(NUM_PREFIX_RE);
-      if (nm) {
-        html = `<span class="num">${escapeHtml(nm[0].trimEnd())}</span> ${tokenizeBody(src, nm[0].length, src.length)}`;
-      } else {
-        html = tokenizeBody(src, 0, src.length);
-      }
-    }
+    return escapeHtml('#') + tokenizeBody(src, 2, src.length);
   }
-  const endInCode = endsInCodeBlock(src, false);
-  return { html, endInCode };
+
+  // Header
+  const hdr = detectHeader(src);
+  if (hdr) {
+    lineDiv.classList.add('line-h', `line-h${hdr.level}`);
+    const hashes = '#'.repeat(hdr.level);
+    const inner = tokenizeBody(src, hdr.contentStart, hdr.contentEnd);
+    const trailing = hdr.contentEnd < src.length
+      ? `<span class="h-mark">${'#'}</span>` : '';
+    return `<span class="h-mark">${hashes}</span><span class="h${hdr.level}">${inner}</span>${trailing}`;
+  }
+
+  // Bullet prefix
+  if (src.length >= 2 && isBulletChar(src[0]) && src[1] === ' ') {
+    return `<span class="bullet">${src[0]}</span> ${tokenizeBody(src, 2, src.length)}`;
+  }
+
+  // Numbered prefix
+  const nm = src.match(NUM_PREFIX_RE);
+  if (nm) {
+    return `<span class="num">${escapeHtml(nm[0].trimEnd())}</span> ${tokenizeBody(src, nm[0].length, src.length)}`;
+  }
+
+  return tokenizeBody(src, 0, src.length);
 }
 
 /* ---------- Render ---------- */
@@ -977,11 +906,9 @@ function renderAll() {
     }
   }
 
-  let inCode = false;
   Array.from(editor.children).forEach(line => {
-    const { html, endInCode } = tokenizeLineHTML(line, inCode);
+    const html = tokenizeLineHTML(line);
     if (line.innerHTML !== html) line.innerHTML = html;
-    inCode = endInCode;
   });
 
   // Restore caret + apply .raw to comment containing it
@@ -1362,7 +1289,7 @@ function handleKeyDown(e) {
     if (!lineDiv) return;
     const src = getLineSource(lineDiv);
     const caret = getCaretOffsetInLine(lineDiv);
-    const opens = unclosedOpeners(src, caret).filter(o => o.opener.kind !== 'code');
+    const opens = unclosedOpeners(src, caret);
     if (opens.length > 0 && !e.shiftKey) {
       // Insert closer for the innermost open span at caret, then a space
       // so the caret lands outside the span (keeping markers hidden).
@@ -1417,24 +1344,6 @@ function handleKeyDown(e) {
     const src = getLineSource(lineDiv);
     const caret = getCaretOffsetInLine(lineDiv);
 
-    // Inside a multi-line /* ... */ code block: just split the line.
-    // Don't insert closers; don't apply header/list continuation.
-    const inCodeAtCaret = lineDiv.classList.contains('line-in-code')
-      || endsInCodeBlock(src.slice(0, caret), false);
-    if (inCodeAtCaret) {
-      const before = src.slice(0, caret);
-      const after = src.slice(caret);
-      setLineSource(lineDiv, before);
-      const newLine = document.createElement('div');
-      setIndent(newLine, getIndent(lineDiv));
-      setLineSource(newLine, after);
-      lineDiv.after(newLine);
-      setCaretOffsetInLine(newLine, 0);
-      renderAll();
-      pushUndo();
-      return;
-    }
-
     // Header: Enter closes the header and drops to a fresh line
     {
       const hdr = detectHeader(src);
@@ -1452,11 +1361,10 @@ function handleKeyDown(e) {
     }
 
     // Close all open spans at caret position by inserting their closers
-    // (innermost first). Skip /* code blocks — they persist across lines.
+    // (innermost first)
     const opens = unclosedOpeners(src, caret);
     let closerStr = '';
     for (let i = opens.length - 1; i >= 0; i--) {
-      if (opens[i].opener.kind === 'code') continue;
       closerStr += opens[i].opener.close;
     }
 
@@ -1858,7 +1766,6 @@ function renderTabBar() {
     const el = document.createElement('div');
     el.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
     el.dataset.id = tab.id;
-    el.draggable = true;
 
     const nameSpan = document.createElement('span');
     nameSpan.className = 'tab-name';
@@ -1873,39 +1780,6 @@ function renderTabBar() {
     nameSpan.addEventListener('dblclick', e => {
       e.stopPropagation();
       startRenameTab(tab.id, nameSpan);
-    });
-
-    el.addEventListener('contextmenu', e => {
-      e.preventDefault();
-      showTabContextMenu(e.clientX, e.clientY, tab.id);
-    });
-
-    el.addEventListener('dragstart', e => {
-      e.dataTransfer.setData('text/plain', tab.id);
-      e.dataTransfer.effectAllowed = 'move';
-      el.classList.add('dragging');
-    });
-    el.addEventListener('dragend', () => {
-      el.classList.remove('dragging');
-      tabbar.querySelectorAll('.tab.drag-over').forEach(t => t.classList.remove('drag-over'));
-    });
-    el.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      const rect = el.getBoundingClientRect();
-      const after = (e.clientX - rect.left) > rect.width / 2;
-      el.classList.toggle('drag-over', !after);
-      el.classList.toggle('drag-over-after', after);
-    });
-    el.addEventListener('dragleave', () => {
-      el.classList.remove('drag-over', 'drag-over-after');
-    });
-    el.addEventListener('drop', e => {
-      e.preventDefault();
-      const after = el.classList.contains('drag-over-after');
-      el.classList.remove('drag-over', 'drag-over-after');
-      const draggedId = e.dataTransfer.getData('text/plain');
-      reorderTab(draggedId, tab.id, after);
     });
 
     tabbar.appendChild(el);

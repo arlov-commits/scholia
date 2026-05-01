@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v3.0 -->
+<!-- v3.1 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v3.0">
+<meta name="version" content="v3.1">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -468,12 +468,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v3.0</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v3.1</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v3.0
+   SCHOLIA — Academic Editor v3.1
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -501,6 +501,7 @@
    ===================================================================== */
 
 const editor = document.getElementById('editor');
+const stage = document.querySelector('.stage');
 const stIndent = document.getElementById('st-indent');
 const stLine = document.getElementById('st-line');
 const sizeDisplay = document.getElementById('size-display');
@@ -1807,7 +1808,7 @@ function switchToTab(id) {
   pushUndo();
   renderTabBar();
   updateURL();
-  editor.focus();
+  editor.focus({ preventScroll: true });
 }
 
 function addNewTab() {
@@ -1827,7 +1828,7 @@ function addNewTab() {
   pushUndo();
   renderTabBar();
   updateURL();
-  editor.focus();
+  editor.focus({ preventScroll: true });
 }
 
 function startRenameTab(id, nameSpan) {
@@ -1882,7 +1883,7 @@ function captureTabState(tab) {
   }
   tab.caretLine = caretLine;
   tab.caretOffset = caretOffset;
-  tab.scrollTop = editor.scrollTop;
+  tab.scrollTop = stage.scrollTop;
 }
 
 function applyTabState(tab) {
@@ -1900,7 +1901,7 @@ function applyTabState(tab) {
   if (editor.children[cl]) {
     setCaretOffsetInLine(editor.children[cl], tab.caretOffset || 0);
   }
-  editor.scrollTop = tab.scrollTop || 0;
+  stage.scrollTop = tab.scrollTop || 0;
 }
 
 let appTabs = [];
@@ -2022,7 +2023,7 @@ document.getElementById('import-input').addEventListener('change', (e) => {
       renderTabBar();
       updateURL();
       saveState();
-      editor.focus();
+      editor.focus({ preventScroll: true });
     } catch (_) {
       alert('Could not restore — file may be corrupted or in wrong format.');
     }
@@ -2039,7 +2040,7 @@ redoStack = [];
 pushUndo();
 renderTabBar();
 updateURL();
-editor.focus();
+editor.focus({ preventScroll: true });
 </script>
 </body>
 </html>

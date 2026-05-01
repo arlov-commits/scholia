@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v6.3 -->
+<!-- v2.1 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v6.3">
+<meta name="version" content="v2.1">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -210,7 +210,7 @@
   }
 
   /* ====== Headers ====== */
-  .h1, .h2, .h3 {
+  .h1, .h2, .h3, .h4, .h5 {
     font-family: 'Cormorant Garamond', serif;
     color: var(--header);
     line-height: 1.3;
@@ -219,10 +219,14 @@
   .h1 { font-size: 1.85em; font-weight: 600; letter-spacing: -0.01em; }
   .h2 { font-size: 1.45em; font-weight: 600; }
   .h3 { font-size: 1.2em;  font-weight: 600; font-style: italic; color: var(--ink-soft); }
+  .h4 { font-size: 1.05em; font-weight: 600; color: var(--ink-soft); }
+  .h5 { font-size: 1em;    font-weight: 500; font-style: italic; color: var(--ink-faint); }
 
   div.line-h1 { margin-top: 0.6em; margin-bottom: 0.2em; }
   div.line-h2 { margin-top: 0.4em; margin-bottom: 0.1em; }
   div.line-h3 { margin-top: 0.3em; }
+  div.line-h4 { margin-top: 0.2em; }
+  div.line-h5 { margin-top: 0.15em; }
 
   /* Header marker — visible only when caret is on the header line */
   .h-mark {
@@ -383,7 +387,7 @@
 
 <div class="stage">
   <div class="page">
-    <div id="editor" contenteditable="true" spellcheck="true" data-placeholder="Begin writing. Comments: ~ ! @ $ % ^ & -- /* */ [ ]. Headers: #h1, ##h2, ###h3. All open spans close on Enter, Tab, or another opener."></div>
+    <div id="editor" contenteditable="true" spellcheck="true" data-placeholder="Begin writing. Comments: ~ ! @ $ % ^ & -- /* */ [ ]. Headers: # ## ### #### #####. Close headers with Tab, Enter, or #."></div>
   </div>
 </div>
 
@@ -391,12 +395,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;opacity:0.4">v6.3</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v2.1</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v6.3
+   SCHOLIA — Academic Editor v2.1
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -751,28 +755,22 @@ const NUM_PREFIX_RE = /^(\d+|[a-z]+|[ivxlcdm]+|[A-Z]+|[IVXLCDM]+)\. /;
 
 /* ---------- Header detection ---------- */
 function detectHeader(src) {
-  // Header lifecycle:
-  // - Source starts with one or more #'s up to 3, then content.
-  // - "#" alone or "##" alone with nothing after → not yet a header (just typing)
-  // - "#x", "##x", "###x" → header level 1/2/3
-  // - Trailing close marker (a single # at the very end) is allowed but optional
   let i = 0;
-  while (i < src.length && i < 3 && src[i] === '#') i++;
+  while (i < src.length && i < 5 && src[i] === '#') i++;
   if (i === 0) return null;
-  if (i === src.length) return null;       // just "#" or "##" or "###"
-  if (src[i] === '#') return null;          // "####..." not supported
-  // Allow optional trailing # for explicit closing (markdown convention)
+  if (i === src.length) return null;   // just hashes, no content yet
+  if (src[i] === '#') return null;     // "######..." not supported
+  // Trailing " #" closes the header (space + single # at end)
   let contentEnd = src.length;
-  // Detect trailing single # preceded by space
   if (src.length >= 2 && src[src.length - 1] === '#' && src[src.length - 2] === ' ') {
-    contentEnd = src.length - 1;
+    contentEnd = src.length - 1; // keep space in content span; only # is the marker
   }
   return { level: i, contentStart: i, contentEnd };
 }
 
 /* ---------- Tokenize one line ---------- */
 function tokenizeLineHTML(lineDiv) {
-  lineDiv.classList.remove('line-h', 'line-h1', 'line-h2', 'line-h3');
+  lineDiv.classList.remove('line-h', 'line-h1', 'line-h2', 'line-h3', 'line-h4', 'line-h5');
   const src = getLineSource(lineDiv);
   if (src === '') return '<br>';
 
@@ -1135,6 +1133,32 @@ function handleKeyDown(e) {
 
   if (isWordBoundaryKey(e)) flushTypingSnapshot();
 
+  // # key at end of an open header → close it and continue on a new line
+  if (e.key === '#' && !e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey) {
+    const _sel = window.getSelection();
+    if (_sel.rangeCount && _sel.isCollapsed) {
+      const _ld = getLineDiv(_sel.getRangeAt(0).startContainer);
+      if (_ld && _ld.classList.contains('line-h')) {
+        const _src = getLineSource(_ld);
+        const _car = getCaretOffsetInLine(_ld);
+        const _hdr = detectHeader(_src);
+        if (_hdr && _hdr.contentEnd === _src.length && _car === _src.length) {
+          e.preventDefault();
+          flushTypingSnapshot();
+          setLineSource(_ld, _src + ' #');
+          const _nl = document.createElement('div');
+          setIndent(_nl, getIndent(_ld));
+          setLineSource(_nl, '');
+          _ld.after(_nl);
+          setCaretOffsetInLine(_nl, 0);
+          renderAll();
+          pushUndo();
+          return;
+        }
+      }
+    }
+  }
+
   // Tab / Shift+Tab
   if (e.key === 'Tab') {
     e.preventDefault();
@@ -1188,6 +1212,20 @@ function handleKeyDown(e) {
       pushUndo();
       return;
     }
+    if (lineDiv.classList.contains('line-h') && !e.shiftKey) {
+      const hdr = detectHeader(src);
+      if (hdr) {
+        if (hdr.contentEnd === src.length) setLineSource(lineDiv, src + ' #');
+        const newLine = document.createElement('div');
+        setIndent(newLine, getIndent(lineDiv));
+        setLineSource(newLine, '');
+        lineDiv.after(newLine);
+        setCaretOffsetInLine(newLine, 0);
+        renderAll();
+        pushUndo();
+        return;
+      }
+    }
     setIndent(lineDiv, getIndent(lineDiv) + (e.shiftKey ? -1 : 1));
     pushUndo();
     updateStatus();
@@ -1207,6 +1245,22 @@ function handleKeyDown(e) {
 
     const src = getLineSource(lineDiv);
     const caret = getCaretOffsetInLine(lineDiv);
+
+    // Header: Enter closes the header and drops to a fresh line
+    {
+      const hdr = detectHeader(src);
+      if (hdr) {
+        if (hdr.contentEnd === src.length) setLineSource(lineDiv, src + ' #');
+        const newLine = document.createElement('div');
+        setIndent(newLine, getIndent(lineDiv));
+        setLineSource(newLine, '');
+        lineDiv.after(newLine);
+        setCaretOffsetInLine(newLine, 0);
+        renderAll();
+        pushUndo();
+        return;
+      }
+    }
 
     // Close all open spans at caret position by inserting their closers
     // (innermost first)

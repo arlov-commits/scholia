@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v2.1 -->
+<!-- v2.2 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v2.1">
+<meta name="version" content="v2.2">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,13 +18,13 @@
     --ink-faint:    #8a7d6c;
 
     --c-tilde:    #b8627a;
-    --c-bang:     #c0392b;
+    --c-asterisk: #6d4a8a;
     --c-at:       #3a4a8a;
     --c-dollar:   #b8861b;
     --c-percent:  #6b7a3a;
 
     --c-tilde-bg:    rgba(184,98,122,0.08);
-    --c-bang-bg:     rgba(192,57,43,0.08);
+    --c-asterisk-bg: rgba(109,74,138,0.08);
     --c-at-bg:       rgba(58,74,138,0.08);
     --c-dollar-bg:   rgba(184,134,27,0.09);
     --c-percent-bg:  rgba(107,122,58,0.09);
@@ -245,9 +245,9 @@
     padding: 0 4px;
     border-radius: 3px;
   }
-  .cmt-tilde   { color: var(--c-tilde);   background: var(--c-tilde-bg); }
-  .cmt-bang    { color: var(--c-bang);    background: var(--c-bang-bg);    font-weight: 500; }
-  .cmt-at      { color: var(--c-at);      background: var(--c-at-bg); }
+  .cmt-tilde    { color: var(--c-tilde);    background: var(--c-tilde-bg); }
+  .cmt-asterisk { color: var(--c-asterisk); background: var(--c-asterisk-bg); }
+  .cmt-at       { color: var(--c-at);       background: var(--c-at-bg); }
   .cmt-dollar  { color: var(--c-dollar);  background: var(--c-dollar-bg); }
   .cmt-percent { color: var(--c-percent); background: var(--c-percent-bg); }
 
@@ -378,7 +378,7 @@
   </div>
   <div class="legend">
     <span><span class="swatch" style="background:var(--c-tilde)"></span>~</span>
-    <span><span class="swatch" style="background:var(--c-bang)"></span>!</span>
+    <span><span class="swatch" style="background:var(--c-asterisk)"></span>*</span>
     <span><span class="swatch" style="background:var(--c-at)"></span>@</span>
     <span><span class="swatch" style="background:var(--c-dollar)"></span>$</span>
     <span><span class="swatch" style="background:var(--c-percent)"></span>%</span>
@@ -395,19 +395,19 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v2.1</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v2.2</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v2.1
+   SCHOLIA — Academic Editor v2.2
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
    Source-of-truth: each line div's textContent is the raw source string.
-   Bold/italic/underline are stored as **bold**, *italic*, __underline__
-   IN THE SOURCE STRING. Markers are NEVER visible to the user
-   (display:none always).
+   Bold/underline stored as **bold**, __underline__ in source.
+   Italic stored as `italic` (backtick) in source, rendered as <i>.
+   Markers are display:none; <i> has no markers.
 
    Comments and headers are "spans" with an opener and closer.
    - While a span is OPEN (no closer), the opener is visible (faded).
@@ -541,7 +541,7 @@ function getLineSource(lineDiv) {
 /* ---------- Comment registry ---------- */
 const SINGLE_CHAR_COMMENTS = [
   { ch: '~', cls: 'cmt-tilde' },
-  { ch: '!', cls: 'cmt-bang' },
+  { ch: '*', cls: 'cmt-asterisk' },
   { ch: '@', cls: 'cmt-at' },
   { ch: '$', cls: 'cmt-dollar' },
   { ch: '%', cls: 'cmt-percent' },
@@ -557,7 +557,10 @@ function clsForSingleChar(ch) {
 /* Detect an opener at position i in src. Returns {len, kind, ch?, cls}. */
 function openerAt(src, i) {
   const c = src[i];
-  if (SINGLE_CHAR_SET.has(c)) return { len: 1, kind: 'single', ch: c, cls: clsForSingleChar(c), open: c, close: c };
+  if (SINGLE_CHAR_SET.has(c)) {
+    if (c === '*' && src[i+1] === '*') return null; // ** is bold, not a * comment
+    return { len: 1, kind: 'single', ch: c, cls: clsForSingleChar(c), open: c, close: c };
+  }
   if (c === '[') return { len: 1, kind: 'bracket', cls: 'cmt-bracket', open: '[', close: ']' };
   if (c === '/' && src[i+1] === '*') return { len: 2, kind: 'code', cls: 'cmt-code', open: '/*', close: '*/' };
   if (c === '-' && src[i+1] === '-') return { len: 2, kind: 'dashes', cls: 'cmt-dashes', open: '--', close: '--' };
@@ -578,25 +581,20 @@ function closerLenAt(src, i, opener) {
   return 0;
 }
 
-/* ---------- Markdown formatting (bold, italic, underline) ----------
-   In source: **bold**, *italic*, __underline__.
-   Markers are display:none, never visible.
-   We tokenize these inline within text segments. */
+/* ---------- Markdown formatting (bold, underline, italic) ----------
+   Source: **bold**, __underline__, `italic` (backtick \u2192 <i> element).
+   Bold/underline markers are display:none. Italic uses native <i>.
+   * is no longer an italic delimiter \u2014 it is a comment opener. */
 
 function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
-/* Render plain text, converting arrow/bullet glyphs to atomic spans
-   and \n to <br>. Also processes markdown formatting. */
 function renderTextSegment(s) {
-  // We process **bold**, __underline__, then *italic*, recursively.
   return processFormatting(s);
 }
 
 function processFormatting(s) {
-  // Try bold first (longest), then underline, then italic
-  // Use a simple recursive descent.
   let out = '';
   let i = 0;
   const n = s.length;
@@ -622,18 +620,17 @@ function processFormatting(s) {
         continue;
       }
     }
-    // *italic* (single *, not part of **)
-    if (ch === '*' && s[i+1] !== '*' && s[i-1] !== '*') {
-      // find single * close, not adjacent to another *
-      let k = i + 1;
-      let close = -1;
-      while (k < n) {
-        if (s[k] === '*' && s[k+1] !== '*' && s[k-1] !== '*') { close = k; break; }
-        k++;
-      }
+    // Backslash escape: \` renders literal backtick; \\ renders literal backslash
+    if (ch === '\\' && i + 1 < n) {
+      const nx = s[i + 1];
+      if (nx === '`' || nx === '\\') { out += escapeHtml(nx); i += 2; continue; }
+    }
+    // `italic` \u2014 backtick delimited, renders as <i>
+    if (ch === '`') {
+      const close = s.indexOf('`', i + 1);
       if (close !== -1 && close > i + 1) {
         const inner = s.slice(i + 1, close);
-        out += `<span class="md md-italic"><span class="md-mark">*</span>${processFormatting(inner)}<span class="md-mark">*</span></span>`;
+        out += `<i>${processFormatting(inner)}</i>`;
         i = close + 1;
         continue;
       }
@@ -641,12 +638,10 @@ function processFormatting(s) {
     // Plain char
     if (ch === '\n') { out += '<br>'; i++; continue; }
     if (ch === '\u2192' || ch === '\u2190') {
-      out += `<span class="arrow">${ch}</span>`;
-      i++; continue;
+      out += `<span class="arrow">${ch}</span>`; i++; continue;
     }
     if (ch === '\u2022' || ch === '\u25E6' || ch === '\u25AA') {
-      out += `<span class="bullet">${ch}</span>`;
-      i++; continue;
+      out += `<span class="bullet">${ch}</span>`; i++; continue;
     }
     out += escapeHtml(ch);
     i++;
@@ -667,6 +662,15 @@ function tokenizeBody(src, start, end) {
   let html = '';
   let i = start;
   while (i < end) {
+    // Backslash escape: \opener → render opener chars literally (\ consumed)
+    if (src[i] === '\\' && i + 1 < end) {
+      const esc = openerAt(src, i + 1);
+      if (esc) {
+        html += escapeHtml(src.slice(i + 1, i + 1 + esc.len));
+        i += 1 + esc.len;
+        continue;
+      }
+    }
     const opener = openerAt(src, i);
     if (opener) {
       const contentStart = i + opener.len;
@@ -678,8 +682,13 @@ function tokenizeBody(src, start, end) {
 
       let k = contentStart;
       while (k < end) {
+        // Backslash: skip escaped opener so it doesn't trigger close/auto-close
+        if (src[k] === '\\' && k + 1 < end) {
+          const esc = openerAt(src, k + 1);
+          if (esc) { k += 1 + esc.len; continue; }
+        }
         // Check matching closer FIRST so that a char which is both opener
-        // and closer (e.g. ~, !, @) is consumed as a closer, not re-opened.
+        // and closer (e.g. ~, *, @) is consumed as a closer, not re-opened.
         const cl = closerLenAt(src, k, opener);
         if (cl > 0) {
           closeAt = k;
@@ -741,7 +750,11 @@ function tokenizeBody(src, start, end) {
     }
     // Plain run until next opener
     let j = i;
-    while (j < end && !openerAt(src, j)) j++;
+    while (j < end) {
+      if (openerAt(src, j)) break;
+      if (src[j] === '\\' && j + 1 < end && openerAt(src, j + 1)) break;
+      j++;
+    }
     html += processFormatting(src.slice(i, j));
     i = j;
   }
@@ -773,6 +786,11 @@ function tokenizeLineHTML(lineDiv) {
   lineDiv.classList.remove('line-h', 'line-h1', 'line-h2', 'line-h3', 'line-h4', 'line-h5');
   const src = getLineSource(lineDiv);
   if (src === '') return '<br>';
+
+  // \# at line start: escaped header — render # literally, no header detection
+  if (src[0] === '\\' && src.length > 1 && src[1] === '#') {
+    return escapeHtml('#') + tokenizeBody(src, 2, src.length);
+  }
 
   // Header
   const hdr = detectHeader(src);
@@ -874,7 +892,7 @@ function updateToolbarState() {
   while (node && node !== editor) {
     if (node.nodeType === Node.ELEMENT_NODE && node.classList) {
       if (node.classList.contains('md-bold')) hasBold = true;
-      if (node.classList.contains('md-italic')) hasItalic = true;
+      if (node.tagName === 'I') hasItalic = true;
       if (node.classList.contains('md-underline')) hasUnderline = true;
     }
     node = node.parentNode;
@@ -1048,7 +1066,7 @@ function flushTypingSnapshot() {
 }
 const WORD_BOUNDARY_CHARS = new Set([
   ' ', '.', ',', ';', ':', '!', '?', '"', "'", '(', ')',
-  '{', '}', '/', '\\', '|'
+  '{', '}', '/', '\\', '|', '*'
 ]);
 function isWordBoundaryKey(e) {
   if (e.key.length !== 1) return false;
@@ -1127,7 +1145,7 @@ function handleKeyDown(e) {
   // Bold/italic/underline → wrap in markdown markers
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
     if (e.key === 'b' || e.key === 'B') { e.preventDefault(); wrapSelection('**', '**'); return; }
-    if (e.key === 'i' || e.key === 'I') { e.preventDefault(); wrapSelection('*',  '*');  return; }
+    if (e.key === 'i' || e.key === 'I') { e.preventDefault(); wrapItalic(); return; }
     if (e.key === 'u' || e.key === 'U') { e.preventDefault(); wrapSelection('__', '__'); return; }
   }
 
@@ -1445,6 +1463,83 @@ function wrapSelection(open, close) {
   pushUndo();
 }
 
+/* ---------- Italic toggle (backtick source → <i> rendering) ---------- */
+function backtickAround(src, caret) {
+  let i = 0;
+  while (i < caret) {
+    if (src[i] === '`') {
+      let j = i + 1;
+      while (j < src.length && src[j] !== '`') j++;
+      if (j < src.length && j >= caret) return { start: i, end: j };
+      i = j + 1;
+    } else {
+      i++;
+    }
+  }
+  return null;
+}
+
+function wrapItalic() {
+  flushTypingSnapshot();
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+
+  if (range.collapsed) {
+    const lineDiv = getLineDiv(range.startContainer);
+    if (!lineDiv) return;
+    const caret = getCaretOffsetInLine(lineDiv);
+    const src = getLineSource(lineDiv);
+    const pair = backtickAround(src, caret);
+    if (pair) {
+      const newSrc = src.slice(0, pair.start) + src.slice(pair.start + 1, pair.end) + src.slice(pair.end + 1);
+      setLineSource(lineDiv, newSrc);
+      renderAll();
+      setCaretOffsetInLine(lineDiv, Math.max(pair.start, caret - 1));
+      renderAll();
+    } else {
+      const newSrc = src.slice(0, caret) + '``' + src.slice(caret);
+      setLineSource(lineDiv, newSrc);
+      renderAll();
+      setCaretOffsetInLine(lineDiv, caret + 1);
+      renderAll();
+    }
+    pushUndo();
+    return;
+  }
+
+  const startLine = getLineDiv(range.startContainer);
+  const endLine = getLineDiv(range.endContainer);
+  if (!startLine || startLine !== endLine) return;
+  const src = getLineSource(startLine);
+  const startOffset = (() => {
+    const r = range.cloneRange();
+    r.selectNodeContents(startLine);
+    r.setEnd(range.startContainer, range.startOffset);
+    return r.toString().length;
+  })();
+  const endOffset = (() => {
+    const r = range.cloneRange();
+    r.selectNodeContents(endLine);
+    r.setEnd(range.endContainer, range.endOffset);
+    return r.toString().length;
+  })();
+  if (src[startOffset - 1] === '`' && src[endOffset] === '`') {
+    const newSrc = src.slice(0, startOffset - 1) + src.slice(startOffset, endOffset) + src.slice(endOffset + 1);
+    setLineSource(startLine, newSrc);
+    renderAll();
+    setCaretOffsetInLine(startLine, endOffset - 1);
+    renderAll();
+  } else {
+    const newSrc = src.slice(0, startOffset) + '`' + src.slice(startOffset, endOffset) + '`' + src.slice(endOffset);
+    setLineSource(startLine, newSrc);
+    renderAll();
+    setCaretOffsetInLine(startLine, endOffset + 2);
+    renderAll();
+  }
+  pushUndo();
+}
+
 /* ---------- Bullet nest ---------- */
 function nestBullet(lineDiv, deeper) {
   const src = getLineSource(lineDiv);
@@ -1586,7 +1681,8 @@ document.getElementById('toolbar').addEventListener('mousedown', (e) => {
   e.preventDefault();
   if (btn.dataset.fmt) {
     editor.focus();
-    const map = { bold: ['**','**'], italic: ['*','*'], underline: ['__','__'] };
+    if (btn.dataset.fmt === 'italic') { wrapItalic(); return; }
+    const map = { bold: ['**','**'], underline: ['__','__'] };
     const m = map[btn.dataset.fmt];
     if (m) wrapSelection(m[0], m[1]);
     return;

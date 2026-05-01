@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v2.4 -->
+<!-- v2.5 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v2.4">
+<meta name="version" content="v2.5">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -463,12 +463,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v2.4</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v2.5</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v2.4
+   SCHOLIA — Academic Editor v2.5
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -1779,6 +1779,11 @@ function renderTabBar() {
   tabbar.appendChild(addBtn);
 }
 
+function updateURL() {
+  const tab = getActiveTab();
+  if (tab) history.replaceState(null, '', '#' + tab.slug);
+}
+
 function switchToTab(id) {
   if (id === activeTabId) return;
   const cur = getActiveTab();
@@ -1789,6 +1794,7 @@ function switchToTab(id) {
   redoStack = [];
   pushUndo();
   renderTabBar();
+  updateURL();
   editor.focus();
 }
 
@@ -1808,6 +1814,7 @@ function addNewTab() {
   redoStack = [];
   pushUndo();
   renderTabBar();
+  updateURL();
   editor.focus();
 }
 
@@ -1825,6 +1832,7 @@ function startRenameTab(id, nameSpan) {
     tab.name = newName;
     tab.slug = slugify(newName);
     renderTabBar();
+    if (tab.id === activeTabId) updateURL();
     saveState();
   }
 
@@ -1918,6 +1926,12 @@ function loadState() {
     if (!state || !Array.isArray(state.tabs) || !state.tabs.length) return false;
     appTabs = state.tabs;
     activeTabId = state.activeTabId || appTabs[0].id;
+    // Honor URL hash: if hash matches a tab slug, make that tab active
+    const hashSlug = window.location.hash.slice(1);
+    if (hashSlug) {
+      const bySlug = appTabs.find(t => t.slug === hashSlug);
+      if (bySlug) activeTabId = bySlug.id;
+    }
     if (typeof state.editorSize === 'number') {
       editorSize = state.editorSize;
       applyFontSize();
@@ -1969,6 +1983,7 @@ undoStack = [];
 redoStack = [];
 pushUndo();
 renderTabBar();
+updateURL();
 editor.focus();
 </script>
 </body>

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v2.6 -->
+<!-- v2.7 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v2.6">
+<meta name="version" content="v2.7">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -140,7 +140,6 @@
   }
 
   .legend {
-    margin-left: auto;
     display: flex; gap: 10px;
     font-family: 'JetBrains Mono', monospace;
     font-size: 11px;
@@ -442,12 +441,18 @@
     <span class="size-display" id="size-display">18</span>
     <button class="tb-btn icon" data-action="size-up" title="Increase font size (Ctrl+=)">A+</button>
   </div>
-  <div class="legend">
-    <span><span class="swatch" style="background:var(--c-tilde)"></span>~</span>
-    <span><span class="swatch" style="background:var(--c-asterisk)"></span>*</span>
-    <span><span class="swatch" style="background:var(--c-at)"></span>@</span>
-    <span><span class="swatch" style="background:var(--c-dollar)"></span>$</span>
-    <span><span class="swatch" style="background:var(--c-percent)"></span>%</span>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:4px">
+    <button class="tb-btn icon" data-action="export" title="Download backup (export JSON)">↓</button>
+    <button class="tb-btn icon" data-action="import" title="Restore from backup (import JSON)">↑</button>
+    <input type="file" id="import-input" accept=".json" style="display:none">
+    <div class="tb-sep" style="margin:0 8px"></div>
+    <div class="legend" style="margin-left:0">
+      <span><span class="swatch" style="background:var(--c-tilde)"></span>~</span>
+      <span><span class="swatch" style="background:var(--c-asterisk)"></span>*</span>
+      <span><span class="swatch" style="background:var(--c-at)"></span>@</span>
+      <span><span class="swatch" style="background:var(--c-dollar)"></span>$</span>
+      <span><span class="swatch" style="background:var(--c-percent)"></span>%</span>
+    </div>
   </div>
 </div>
 
@@ -463,12 +468,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v2.6</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v2.7</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v2.6
+   SCHOLIA — Academic Editor v2.7
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -1981,6 +1986,50 @@ document.getElementById('toolbar').addEventListener('mousedown', (e) => {
   else if (action === 'redo') doRedo();
   else if (action === 'size-up') bumpFontSize(SIZE_STEP);
   else if (action === 'size-down') bumpFontSize(-SIZE_STEP);
+  else if (action === 'export') exportBackup();
+  else if (action === 'import') document.getElementById('import-input').click();
+});
+
+/* ---------- Export / Import ---------- */
+function exportBackup() {
+  const cur = getActiveTab();
+  if (cur) captureTabState(cur);
+  const state = { version: 1, tabs: appTabs, activeTabId, editorSize };
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url;
+  a.download = 'scholia-backup-' + date + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('import-input').addEventListener('change', (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const state = JSON.parse(ev.target.result);
+      if (!state || !Array.isArray(state.tabs) || !state.tabs.length) throw new Error('invalid');
+      appTabs = state.tabs;
+      activeTabId = state.activeTabId || state.tabs[0].id;
+      if (typeof state.editorSize === 'number') { editorSize = state.editorSize; applyFontSize(); }
+      applyTabState(getActiveTab());
+      undoStack = [];
+      redoStack = [];
+      pushUndo();
+      renderTabBar();
+      updateURL();
+      saveState();
+      editor.focus();
+    } catch (_) {
+      alert('Could not restore — file may be corrupted or in wrong format.');
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
 });
 
 /* ---------- Init ---------- */

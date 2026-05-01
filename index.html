@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v2.7 -->
+<!-- v2.8 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v2.7">
+<meta name="version" content="v2.8">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -468,18 +468,18 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v2.7</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v2.8</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v2.7
+   SCHOLIA — Academic Editor v2.8
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
    Source-of-truth: each line div's textContent is the raw source string.
-   Bold/underline stored as **bold**, __underline__ in source.
-   Italic stored as `italic` (backtick) in source, rendered as <i>.
+   Bold/italic/underline stored as <b>x</b>, <i>x</i>, <u>x</u>.
+   Tag markers are wrapped in hidden .md-mark spans (always invisible).
    Markers are display:none; <i> has no markers.
 
    Comments and headers are "spans" with an opener and closer.
@@ -654,10 +654,13 @@ function closerLenAt(src, i, opener) {
   return 0;
 }
 
-/* ---------- Markdown formatting (bold, underline, italic) ----------
-   Source: **bold**, __underline__, `italic` (backtick \u2192 <i> element).
-   Bold/underline markers are display:none. Italic uses native <i>.
-   * is no longer an italic delimiter \u2014 it is a comment opener. */
+/* ---------- Inline formatting (bold, italic, underline) ----------
+   Word-style: source uses <b>...</b>, <i>...</i>, <u>...</u> as
+   tag-style markers (escaped in HTML output as hidden .md-mark spans).
+   Markers are NEVER visible regardless of caret position. textContent
+   round-trips through render so source is preserved. Unclosed openers
+   still hide the opener and apply formatting to end of segment.
+   Backslash escape: \< renders literal <, \\ renders literal \. */
 
 function escapeHtml(s) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -673,41 +676,29 @@ function processFormatting(s) {
   const n = s.length;
   while (i < n) {
     const ch = s[i];
-    // **bold**
-    if (ch === '*' && s[i+1] === '*') {
-      const close = s.indexOf('**', i + 2);
-      if (close !== -1 && close > i + 2) {
-        const inner = s.slice(i + 2, close);
-        out += `<span class="md md-bold"><span class="md-mark">**</span>${processFormatting(inner)}<span class="md-mark">**</span></span>`;
-        i = close + 2;
-        continue;
-      }
-    }
-    // __underline__
-    if (ch === '_' && s[i+1] === '_') {
-      const close = s.indexOf('__', i + 2);
-      if (close !== -1 && close > i + 2) {
-        const inner = s.slice(i + 2, close);
-        out += `<span class="md md-underline"><span class="md-mark">__</span>${processFormatting(inner)}<span class="md-mark">__</span></span>`;
-        i = close + 2;
-        continue;
-      }
-    }
-    // Backslash escape: \` renders literal backtick; \\ renders literal backslash
+
+    // Backslash escape: \\ \u2192 \, \< \u2192 <
     if (ch === '\\' && i + 1 < n) {
       const nx = s[i + 1];
-      if (nx === '`' || nx === '\\') { out += escapeHtml(nx); i += 2; continue; }
+      if (nx === '<' || nx === '\\') { out += escapeHtml(nx); i += 2; continue; }
     }
-    // `italic` \u2014 backtick delimited, renders as <i>
-    if (ch === '`') {
-      const close = s.indexOf('`', i + 1);
-      if (close !== -1 && close > i + 1) {
-        const inner = s.slice(i + 1, close);
-        out += `<i>${processFormatting(inner)}</i>`;
-        i = close + 1;
-        continue;
-      }
+
+    // <b>, <i>, <u> tag-style formatting
+    if (ch === '<' && s[i+2] === '>' && (s[i+1] === 'b' || s[i+1] === 'i' || s[i+1] === 'u')) {
+      const tag = s[i+1];
+      const cls = tag === 'b' ? 'md-bold' : tag === 'i' ? 'md-italic' : 'md-underline';
+      const closeStr = '</' + tag + '>';
+      const closeIdx = s.indexOf(closeStr, i + 3);
+      const innerStart = i + 3;
+      const innerEnd = closeIdx === -1 ? n : closeIdx;
+      const inner = s.slice(innerStart, innerEnd);
+      const openMark = `<span class="md-mark">${escapeHtml('<' + tag + '>')}</span>`;
+      const closeMark = closeIdx === -1 ? '' : `<span class="md-mark">${escapeHtml(closeStr)}</span>`;
+      out += `<span class="md ${cls}">${openMark}${processFormatting(inner)}${closeMark}</span>`;
+      i = closeIdx === -1 ? n : closeIdx + closeStr.length;
+      continue;
     }
+
     // Plain char
     if (ch === '\n') { out += '<br>'; i++; continue; }
     if (ch === '\u2192' || ch === '\u2190') {
@@ -965,7 +956,7 @@ function updateToolbarState() {
   while (node && node !== editor) {
     if (node.nodeType === Node.ELEMENT_NODE && node.classList) {
       if (node.classList.contains('md-bold')) hasBold = true;
-      if (node.tagName === 'I') hasItalic = true;
+      if (node.classList.contains('md-italic')) hasItalic = true;
       if (node.classList.contains('md-underline')) hasUnderline = true;
     }
     node = node.parentNode;
@@ -1223,11 +1214,11 @@ function handleKeyDown(e) {
     saveState();
     return;
   }
-  // Bold/italic/underline → wrap in markdown markers
+  // Bold/italic/underline → wrap with HTML-style markers (hidden in render)
   if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
-    if (e.key === 'b' || e.key === 'B') { e.preventDefault(); wrapSelection('**', '**'); return; }
-    if (e.key === 'i' || e.key === 'I') { e.preventDefault(); wrapItalic(); return; }
-    if (e.key === 'u' || e.key === 'U') { e.preventDefault(); wrapSelection('__', '__'); return; }
+    if (e.key === 'b' || e.key === 'B') { e.preventDefault(); toggleFormatting('b'); return; }
+    if (e.key === 'i' || e.key === 'I') { e.preventDefault(); toggleFormatting('i'); return; }
+    if (e.key === 'u' || e.key === 'U') { e.preventDefault(); toggleFormatting('u'); return; }
   }
 
   if (isWordBoundaryKey(e)) flushTypingSnapshot();
@@ -1501,8 +1492,13 @@ function handleKeyDown(e) {
   }
 }
 
-/* ---------- Wrap selection with markdown markers ---------- */
-function wrapSelection(open, close) {
+/* ---------- Toggle inline formatting (bold / italic / underline) ----------
+   tagName ∈ {'b','i','u'}. Source uses <b>...</b> style markers; renderer
+   hides them as .md-mark spans. Selection wrapped (or unwrapped if exact
+   match); collapsed caret inserts an empty pair. */
+function toggleFormatting(tagName) {
+  const open = '<' + tagName + '>';
+  const close = '</' + tagName + '>';
   flushTypingSnapshot();
   const sel = window.getSelection();
   if (!sel.rangeCount) return;
@@ -1520,74 +1516,6 @@ function wrapSelection(open, close) {
     pushUndo();
     return;
   }
-  const startLine = getLineDiv(range.startContainer);
-  const endLine = getLineDiv(range.endContainer);
-  if (!startLine || startLine !== endLine) return;
-  const startOffset = (() => {
-    const r = range.cloneRange();
-    r.selectNodeContents(startLine);
-    r.setEnd(range.startContainer, range.startOffset);
-    return r.toString().length;
-  })();
-  const endOffset = (() => {
-    const r = range.cloneRange();
-    r.selectNodeContents(endLine);
-    r.setEnd(range.endContainer, range.endOffset);
-    return r.toString().length;
-  })();
-  const src = getLineSource(startLine);
-  const inner = src.slice(startOffset, endOffset);
-  setLineSource(startLine, src.slice(0, startOffset) + open + inner + close + src.slice(endOffset));
-  renderAll();
-  setCaretOffsetInLine(startLine, endOffset + open.length + close.length);
-  renderAll();
-  pushUndo();
-}
-
-/* ---------- Italic toggle (backtick source → <i> rendering) ---------- */
-function backtickAround(src, caret) {
-  let i = 0;
-  while (i < caret) {
-    if (src[i] === '`') {
-      let j = i + 1;
-      while (j < src.length && src[j] !== '`') j++;
-      if (j < src.length && j >= caret) return { start: i, end: j };
-      i = j + 1;
-    } else {
-      i++;
-    }
-  }
-  return null;
-}
-
-function wrapItalic() {
-  flushTypingSnapshot();
-  const sel = window.getSelection();
-  if (!sel.rangeCount) return;
-  const range = sel.getRangeAt(0);
-
-  if (range.collapsed) {
-    const lineDiv = getLineDiv(range.startContainer);
-    if (!lineDiv) return;
-    const caret = getCaretOffsetInLine(lineDiv);
-    const src = getLineSource(lineDiv);
-    const pair = backtickAround(src, caret);
-    if (pair) {
-      const newSrc = src.slice(0, pair.start) + src.slice(pair.start + 1, pair.end) + src.slice(pair.end + 1);
-      setLineSource(lineDiv, newSrc);
-      renderAll();
-      setCaretOffsetInLine(lineDiv, Math.max(pair.start, caret - 1));
-      renderAll();
-    } else {
-      const newSrc = src.slice(0, caret) + '``' + src.slice(caret);
-      setLineSource(lineDiv, newSrc);
-      renderAll();
-      setCaretOffsetInLine(lineDiv, caret + 1);
-      renderAll();
-    }
-    pushUndo();
-    return;
-  }
 
   const startLine = getLineDiv(range.startContainer);
   const endLine = getLineDiv(range.endContainer);
@@ -1605,17 +1533,24 @@ function wrapItalic() {
     r.setEnd(range.endContainer, range.endOffset);
     return r.toString().length;
   })();
-  if (src[startOffset - 1] === '`' && src[endOffset] === '`') {
-    const newSrc = src.slice(0, startOffset - 1) + src.slice(startOffset, endOffset) + src.slice(endOffset + 1);
+
+  // Unwrap if selection is exactly bracketed by this tag pair
+  if (src.slice(startOffset - open.length, startOffset) === open &&
+      src.slice(endOffset, endOffset + close.length) === close) {
+    const newSrc = src.slice(0, startOffset - open.length) +
+                   src.slice(startOffset, endOffset) +
+                   src.slice(endOffset + close.length);
     setLineSource(startLine, newSrc);
     renderAll();
-    setCaretOffsetInLine(startLine, endOffset - 1);
+    setCaretOffsetInLine(startLine, endOffset - open.length);
     renderAll();
   } else {
-    const newSrc = src.slice(0, startOffset) + '`' + src.slice(startOffset, endOffset) + '`' + src.slice(endOffset);
+    const newSrc = src.slice(0, startOffset) + open +
+                   src.slice(startOffset, endOffset) + close +
+                   src.slice(endOffset);
     setLineSource(startLine, newSrc);
     renderAll();
-    setCaretOffsetInLine(startLine, endOffset + 2);
+    setCaretOffsetInLine(startLine, endOffset + open.length + close.length);
     renderAll();
   }
   pushUndo();
@@ -1975,10 +1910,9 @@ document.getElementById('toolbar').addEventListener('mousedown', (e) => {
   e.preventDefault();
   if (btn.dataset.fmt) {
     editor.focus();
-    if (btn.dataset.fmt === 'italic') { wrapItalic(); return; }
-    const map = { bold: ['**','**'], underline: ['__','__'] };
-    const m = map[btn.dataset.fmt];
-    if (m) wrapSelection(m[0], m[1]);
+    const map = { bold: 'b', italic: 'i', underline: 'u' };
+    const tag = map[btn.dataset.fmt];
+    if (tag) toggleFormatting(tag);
     return;
   }
   const action = btn.dataset.action;

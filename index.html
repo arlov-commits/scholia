@@ -393,7 +393,7 @@
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v5
+   SCHOLIA — Academic Editor v6.1
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -670,17 +670,8 @@ function tokenizeBody(src, start, end) {
 
       let k = contentStart;
       while (k < end) {
-        // For non-bracket, non-code: another opener auto-closes
-        if (opener.kind !== 'bracket' && opener.kind !== 'code') {
-          const otherOpener = openerAt(src, k);
-          if (otherOpener) {
-            closeAt = k;
-            closeLen = 0;
-            closedByOpener = true;
-            break;
-          }
-        }
-        // Look for matching closer
+        // Check matching closer FIRST so that a char which is both opener
+        // and closer (e.g. ~, !, @) is consumed as a closer, not re-opened.
         const cl = closerLenAt(src, k, opener);
         if (cl > 0) {
           closeAt = k;
@@ -692,6 +683,16 @@ function tokenizeBody(src, start, end) {
           closeAt = k;
           closeLen = 0; // don't consume the ]
           break;
+        }
+        // For non-bracket, non-code: another opener auto-closes
+        if (opener.kind !== 'bracket' && opener.kind !== 'code') {
+          const otherOpener = openerAt(src, k);
+          if (otherOpener) {
+            closeAt = k;
+            closeLen = 0;
+            closedByOpener = true;
+            break;
+          }
         }
         k++;
       }
@@ -905,14 +906,14 @@ function openSpanAtCaret(lineDiv) {
       let k = i + opener.len;
       let endIdx = -1;
       while (k < caret) {
+        const cl = closerLenAt(src, k, opener);
+        if (cl > 0) { endIdx = k + cl; break; }
+        if (opener.kind !== 'bracket' && src[k] === ']') { endIdx = k; break; }
         // Another opener ends non-bracket spans
         if (opener.kind !== 'bracket' && opener.kind !== 'code') {
           const oth = openerAt(src, k);
           if (oth) { endIdx = k; break; }
         }
-        const cl = closerLenAt(src, k, opener);
-        if (cl > 0) { endIdx = k + cl; break; }
-        if (opener.kind !== 'bracket' && src[k] === ']') { endIdx = k; break; }
         k++;
       }
       if (endIdx === -1) {
@@ -939,13 +940,13 @@ function unclosedOpeners(src, pos) {
       let k = i + opener.len;
       let closed = false;
       while (k < pos) {
+        const cl = closerLenAt(src, k, opener);
+        if (cl > 0) { closed = true; k += cl; break; }
+        if (opener.kind !== 'bracket' && src[k] === ']') { closed = true; break; }
         if (opener.kind !== 'bracket' && opener.kind !== 'code') {
           const oth = openerAt(src, k);
           if (oth) { closed = true; break; }   // closed by another opener
         }
-        const cl = closerLenAt(src, k, opener);
-        if (cl > 0) { closed = true; k += cl; break; }
-        if (opener.kind !== 'bracket' && src[k] === ']') { closed = true; break; }
         k++;
       }
       if (!closed) {

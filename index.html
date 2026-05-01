@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v3.2 -->
+<!-- v3.3 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v3.2">
+<meta name="version" content="v3.3">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -468,12 +468,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v3.2</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v3.3</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v3.2
+   SCHOLIA — Academic Editor v3.3
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -2032,7 +2032,7 @@ function createDefaultTab() {
 }
 
 /* ---------- Toolbar ---------- */
-document.getElementById('toolbar').addEventListener('mousedown', (e) => {
+document.querySelector('.chrome').addEventListener('mousedown', (e) => {
   const btn = e.target.closest('.tb-btn');
   if (!btn) return;
   e.preventDefault();

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v2.3 -->
+<!-- v2.4 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v2.3">
+<meta name="version" content="v2.4">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -153,9 +153,75 @@
     box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
   }
 
+  .tabbar {
+    position: fixed; top: 52px; left: 0; right: 0;
+    height: 34px;
+    background: #1e1a16;
+    border-bottom: 1px solid #0c0a08;
+    display: flex; align-items: flex-end;
+    padding: 0 16px; gap: 2px;
+    z-index: 49;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    overflow-x: auto; overflow-y: hidden;
+  }
+  .tabbar::-webkit-scrollbar { height: 0; }
+
+  .tab {
+    display: inline-flex; align-items: center;
+    height: 28px;
+    padding: 0 14px;
+    border-radius: 4px 4px 0 0;
+    background: transparent;
+    color: rgba(216,205,184,0.45);
+    cursor: pointer;
+    user-select: none;
+    border: 1px solid transparent;
+    border-bottom: none;
+    position: relative;
+    top: 1px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 100ms, color 100ms;
+  }
+  .tab:hover { background: rgba(201,168,106,0.08); color: rgba(216,205,184,0.75); }
+  .tab.active {
+    background: var(--paper);
+    color: var(--ink);
+    border-color: #0c0a08;
+    font-weight: 500;
+  }
+
+  .tab-name {
+    overflow: hidden; text-overflow: ellipsis; max-width: 130px;
+  }
+  .tab-name-input {
+    background: transparent; border: none; outline: none;
+    color: inherit; font: inherit;
+    width: 100px; min-width: 40px;
+  }
+
+  .tab-add {
+    height: 22px; min-width: 22px;
+    border-radius: 3px;
+    background: transparent;
+    border: 1px solid transparent;
+    color: rgba(216,205,184,0.4);
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: 16px; line-height: 1;
+    align-self: center;
+    margin-left: 4px; flex-shrink: 0;
+  }
+  .tab-add:hover {
+    background: rgba(201,168,106,0.12);
+    border-color: rgba(201,168,106,0.3);
+    color: var(--chrome-accent);
+  }
+
   .stage {
     position: absolute;
-    top: 52px; bottom: 28px; left: 0; right: 0;
+    top: 86px; bottom: 28px; left: 0; right: 0;
     overflow-y: auto;
     overflow-x: hidden;
   }
@@ -385,6 +451,8 @@
   </div>
 </div>
 
+<div class="tabbar" id="tabbar"></div>
+
 <div class="stage">
   <div class="page">
     <div id="editor" contenteditable="true" spellcheck="true" data-placeholder="Begin writing. Comments: ~ ! @ $ % ^ & -- /* */ [ ]. Headers: # ## ### #### #####. Close headers with Tab, Enter, or #."></div>
@@ -395,12 +463,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v2.3</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v2.4</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v2.3
+   SCHOLIA — Academic Editor v2.4
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -1675,6 +1743,98 @@ function sanitizeForPaste(root) {
   process(root);
 }
 
+/* ---------- Tab Bar ---------- */
+const tabbar = document.getElementById('tabbar');
+
+function renderTabBar() {
+  tabbar.innerHTML = '';
+  appTabs.forEach(tab => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (tab.id === activeTabId ? ' active' : '');
+    el.dataset.id = tab.id;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.className = 'tab-name';
+    nameSpan.textContent = tab.name;
+    el.appendChild(nameSpan);
+
+    el.addEventListener('click', () => {
+      if (tab.id === activeTabId) return;
+      switchToTab(tab.id);
+    });
+
+    nameSpan.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      startRenameTab(tab.id, nameSpan);
+    });
+
+    tabbar.appendChild(el);
+  });
+
+  const addBtn = document.createElement('button');
+  addBtn.className = 'tab-add';
+  addBtn.title = 'New tab';
+  addBtn.textContent = '+';
+  addBtn.addEventListener('click', addNewTab);
+  tabbar.appendChild(addBtn);
+}
+
+function switchToTab(id) {
+  if (id === activeTabId) return;
+  const cur = getActiveTab();
+  if (cur) captureTabState(cur);
+  activeTabId = id;
+  applyTabState(getActiveTab());
+  undoStack = [];
+  redoStack = [];
+  pushUndo();
+  renderTabBar();
+  editor.focus();
+}
+
+function addNewTab() {
+  const cur = getActiveTab();
+  if (cur) captureTabState(cur);
+  const name = 'Tab ' + (appTabs.length + 1);
+  const tab = {
+    id: genId(), name, slug: slugify(name),
+    lines: [{ src: '', indent: 0 }],
+    caretLine: 0, caretOffset: 0, scrollTop: 0
+  };
+  appTabs.push(tab);
+  activeTabId = tab.id;
+  applyTabState(tab);
+  undoStack = [];
+  redoStack = [];
+  pushUndo();
+  renderTabBar();
+  editor.focus();
+}
+
+function startRenameTab(id, nameSpan) {
+  const tab = appTabs.find(t => t.id === id);
+  if (!tab) return;
+  const input = document.createElement('input');
+  input.className = 'tab-name-input';
+  input.value = tab.name;
+  nameSpan.replaceWith(input);
+  input.focus(); input.select();
+
+  function finish(revert) {
+    const newName = revert ? tab.name : (input.value.trim() || tab.name);
+    tab.name = newName;
+    tab.slug = slugify(newName);
+    renderTabBar();
+    saveState();
+  }
+
+  input.addEventListener('blur', () => finish(false));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(true); }
+  });
+}
+
 /* ---------- State Management ---------- */
 const STORAGE_KEY = 'scholia_v1';
 
@@ -1808,6 +1968,7 @@ applyTabState(getActiveTab());
 undoStack = [];
 redoStack = [];
 pushUndo();
+renderTabBar();
 editor.focus();
 </script>
 </body>

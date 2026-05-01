@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v2.9 -->
+<!-- v3.0 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v2.9">
+<meta name="version" content="v3.0">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -468,12 +468,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;color:var(--chrome-accent)">v2.9</span>
+  <span style="margin-left:18px;color:var(--chrome-accent)">v3.0</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v2.9
+   SCHOLIA — Academic Editor v3.0
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -1622,6 +1622,65 @@ function autoConvertAroundCaret() {
     return;
   }
 }
+
+/* ---------- Copy / Cut ----------
+   Override default copy so the clipboard receives the SOURCE STRING
+   (with comment, header, and <b>/<i>/<u> tags intact) rather than the
+   visually rendered text. This lets a paste back into Scholia restore
+   the original formatting. We don't set text/html so the existing paste
+   handler reads our text/plain. */
+function getSelectionSource() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return null;
+  const range = sel.getRangeAt(0);
+  if (range.collapsed) return null;
+  const startLine = getLineDiv(range.startContainer);
+  const endLine = getLineDiv(range.endContainer);
+  if (!startLine || !endLine) return null;
+  const lines = Array.from(editor.children);
+  const startIdx = lines.indexOf(startLine);
+  const endIdx = lines.indexOf(endLine);
+  if (startIdx === -1 || endIdx === -1) return null;
+  const startOffset = (() => {
+    const r = range.cloneRange();
+    r.selectNodeContents(startLine);
+    r.setEnd(range.startContainer, range.startOffset);
+    return r.toString().length;
+  })();
+  const endOffset = (() => {
+    const r = range.cloneRange();
+    r.selectNodeContents(endLine);
+    r.setEnd(range.endContainer, range.endOffset);
+    return r.toString().length;
+  })();
+  if (startIdx === endIdx) {
+    return getLineSource(startLine).slice(startOffset, endOffset);
+  }
+  let out = getLineSource(startLine).slice(startOffset);
+  for (let i = startIdx + 1; i < endIdx; i++) {
+    out += '\n' + getLineSource(lines[i]);
+  }
+  out += '\n' + getLineSource(endLine).slice(0, endOffset);
+  return out;
+}
+
+editor.addEventListener('copy', (e) => {
+  const src = getSelectionSource();
+  if (src === null) return;
+  e.preventDefault();
+  e.clipboardData.setData('text/plain', src);
+});
+
+editor.addEventListener('cut', (e) => {
+  const src = getSelectionSource();
+  if (src === null) return;
+  e.preventDefault();
+  e.clipboardData.setData('text/plain', src);
+  flushTypingSnapshot();
+  deleteSelectionRange();
+  renderAll();
+  pushUndo();
+});
 
 /* ---------- Paste ---------- */
 editor.addEventListener('paste', (e) => {

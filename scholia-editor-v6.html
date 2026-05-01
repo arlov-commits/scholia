@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Scholia — Academic Editor</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper:        #f4ecd8;
+    --paper-edge:   #e8dfc8;
+    --ink:          #1f1a14;
+    --ink-soft:     #4a4036;
+    --ink-faint:    #8a7d6c;
+
+    --c-tilde:    #b8627a;
+    --c-bang:     #c0392b;
+    --c-at:       #3a4a8a;
+    --c-dollar:   #b8861b;
+    --c-percent:  #6b7a3a;
+
+    --c-tilde-bg:    rgba(184,98,122,0.08);
+    --c-bang-bg:     rgba(192,57,43,0.08);
+    --c-at-bg:       rgba(58,74,138,0.08);
+    --c-dollar-bg:   rgba(184,134,27,0.09);
+    --c-percent-bg:  rgba(107,122,58,0.09);
+
+    --c-caret:    #8a7d6c;
+    --c-amp:      #8a5a2b;
+    --c-dashes:   #a04a3a;
+    --c-code:     #2d6e6b;
+    --c-bracket:  #3d4a6b;
+
+    --c-caret-bg:   rgba(138,125,108,0.08);
+    --c-amp-bg:     rgba(138,90,43,0.08);
+    --c-dashes-bg:  rgba(160,74,58,0.08);
+    --c-code-bg:    rgba(45,110,107,0.08);
+    --c-bracket-bg: rgba(61,74,107,0.07);
+
+    --header:     #2a2218;
+
+    --chrome-bg:    #2a2520;
+    --chrome-fg:    #d8cdb8;
+    --chrome-accent:#c9a86a;
+    --rule:         #cbbfa3;
+
+    --editor-size: 18px;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: radial-gradient(ellipse at top, #3a312a 0%, #221c17 60%, #181410 100%);
+    font-family: 'EB Garamond', Georgia, serif;
+    color: var(--ink);
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 100;
+    opacity: 0.035;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='3'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode: overlay;
+  }
+
+  .chrome {
+    position: fixed; top: 0; left: 0; right: 0;
+    height: 52px;
+    background: linear-gradient(180deg, #322b24, #251f1a);
+    border-bottom: 1px solid #0c0a08;
+    box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset, 0 6px 18px rgba(0,0,0,0.4);
+    display: flex; align-items: center;
+    padding: 0 22px; gap: 18px;
+    z-index: 50;
+    font-family: 'Inter', sans-serif;
+    color: var(--chrome-fg);
+  }
+
+  .brand {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 22px; font-weight: 500;
+    letter-spacing: 0.08em;
+    color: var(--chrome-accent);
+    margin-right: 6px;
+  }
+  .brand .dot { color: #8b6f3a; margin: 0 4px; }
+
+  .toolbar { display: flex; gap: 4px; align-items: center; flex-wrap: nowrap; }
+
+  .tb-btn {
+    background: transparent;
+    color: var(--chrome-fg);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    min-width: 30px; height: 30px;
+    padding: 0 8px;
+    font-family: 'EB Garamond', serif;
+    font-size: 15px;
+    cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: all 120ms ease;
+    white-space: nowrap;
+  }
+  .tb-btn:hover {
+    background: rgba(201, 168, 106, 0.12);
+    border-color: rgba(201, 168, 106, 0.3);
+    color: var(--chrome-accent);
+  }
+  .tb-btn.active {
+    background: rgba(201, 168, 106, 0.22);
+    border-color: rgba(201, 168, 106, 0.45);
+    color: var(--chrome-accent);
+  }
+  .tb-btn b { font-weight: 700; }
+  .tb-btn i { font-style: italic; }
+  .tb-btn u { text-decoration: underline; text-underline-offset: 2px; }
+  .tb-btn.icon { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 600; }
+
+  .tb-sep {
+    width: 1px; height: 22px;
+    background: rgba(216, 205, 184, 0.15);
+    margin: 0 6px;
+  }
+
+  .size-display {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(216, 205, 184, 0.75);
+    min-width: 32px;
+    text-align: center;
+    letter-spacing: 0.04em;
+  }
+
+  .legend {
+    margin-left: auto;
+    display: flex; gap: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(216, 205, 184, 0.5);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend .swatch {
+    width: 10px; height: 10px; border-radius: 50%;
+    display: inline-block;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.3);
+  }
+
+  .stage {
+    position: absolute;
+    top: 52px; bottom: 28px; left: 0; right: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  .page {
+    width: 100%;
+    min-height: 100%;
+    background: var(--paper);
+    background-image:
+      radial-gradient(ellipse at 15% 10%, rgba(255,250,235,0.5), transparent 60%),
+      radial-gradient(ellipse at 85% 90%, rgba(180,150,100,0.08), transparent 60%);
+    box-shadow:
+      0 1px 0 var(--paper-edge) inset,
+      0 -1px 0 rgba(0,0,0,0.06) inset;
+    padding: 40px 56px 80px;
+    position: relative;
+  }
+
+  .page::before {
+    content: '';
+    position: absolute;
+    top: 18px; left: 56px; right: 56px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--rule) 20%, var(--rule) 80%, transparent);
+    opacity: 0.5;
+  }
+
+  #editor {
+    outline: none;
+    font-family: 'EB Garamond', Georgia, serif;
+    font-size: var(--editor-size);
+    line-height: 1.7;
+    color: var(--ink);
+    min-height: 70vh;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    caret-color: var(--ink);
+    -webkit-font-feature-settings: "kern", "liga", "onum";
+    font-feature-settings: "kern", "liga", "onum";
+  }
+
+  #editor::selection,
+  #editor *::selection {
+    background: rgba(201, 168, 106, 0.45);
+    color: var(--ink);
+  }
+
+  #editor > div {
+    padding-left: calc(var(--indent, 0) * 2.2em);
+    min-height: 1.7em;
+    position: relative;
+  }
+
+  /* ====== Headers ====== */
+  .h1, .h2, .h3 {
+    font-family: 'Cormorant Garamond', serif;
+    color: var(--header);
+    line-height: 1.3;
+    display: inline;
+  }
+  .h1 { font-size: 1.85em; font-weight: 600; letter-spacing: -0.01em; }
+  .h2 { font-size: 1.45em; font-weight: 600; }
+  .h3 { font-size: 1.2em;  font-weight: 600; font-style: italic; color: var(--ink-soft); }
+
+  div.line-h1 { margin-top: 0.6em; margin-bottom: 0.2em; }
+  div.line-h2 { margin-top: 0.4em; margin-bottom: 0.1em; }
+  div.line-h3 { margin-top: 0.3em; }
+
+  /* Header marker — visible only when caret is on the header line */
+  .h-mark {
+    display: none;
+    color: var(--ink-faint);
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 400;
+    font-size: 0.5em;
+    margin-right: 0.35em;
+    vertical-align: 0.18em;
+  }
+  div.line-h.raw .h-mark { display: inline; }
+
+  /* ====== Comments ====== */
+  .cmt {
+    padding: 0 4px;
+    border-radius: 3px;
+  }
+  .cmt-tilde   { color: var(--c-tilde);   background: var(--c-tilde-bg); }
+  .cmt-bang    { color: var(--c-bang);    background: var(--c-bang-bg);    font-weight: 500; }
+  .cmt-at      { color: var(--c-at);      background: var(--c-at-bg); }
+  .cmt-dollar  { color: var(--c-dollar);  background: var(--c-dollar-bg); }
+  .cmt-percent { color: var(--c-percent); background: var(--c-percent-bg); }
+
+  .cmt-caret {
+    color: var(--c-caret); background: var(--c-caret-bg);
+    font-size: 0.82em;
+    vertical-align: 0.18em;
+  }
+  .cmt-amp {
+    color: var(--c-amp); background: var(--c-amp-bg);
+    font-variant: small-caps;
+    letter-spacing: 0.04em;
+  }
+  .cmt-dashes {
+    color: var(--c-dashes); background: var(--c-dashes-bg);
+    text-decoration: line-through;
+    text-decoration-color: rgba(160, 74, 58, 0.5);
+  }
+  .cmt-code {
+    color: var(--c-code); background: var(--c-code-bg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9em;
+  }
+  .cmt-bracket {
+    color: var(--c-bracket); background: var(--c-bracket-bg);
+  }
+
+  /* ====== Markers ======
+     Default rule: COLLAPSED (display: none). Markers reappear faded
+     when:
+       - the comment is OPEN (no closer yet) — opener marker shown
+       - the caret is INSIDE the comment span — both markers shown faded
+     Bracket markers always visible (special case). */
+  .marker {
+    display: none;
+    color: inherit;
+    opacity: 0.45;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82em;
+    font-weight: 500;
+  }
+  /* Opener visible when comment is open OR caret inside */
+  .cmt.open > .marker.marker-open,
+  .cmt.raw  > .marker {
+    display: inline;
+  }
+  .cmt-bracket > .marker {
+    display: inline;
+    opacity: 0.7;
+    font-family: inherit;
+    font-size: inherit;
+  }
+  .cmt-bracket.raw > .marker { opacity: 1; }
+
+  /* Markdown formatting markers — ALWAYS hidden (per spec) */
+  .md-mark { display: none; }
+  .md-bold      { font-weight: 700; }
+  .md-italic    { font-style: italic; }
+  .md-underline { text-decoration: underline; text-underline-offset: 2px; }
+
+  /* Lists */
+  .bullet, .num {
+    display: inline-block;
+    color: var(--ink-soft);
+    margin-right: 0.5em;
+    font-weight: 500;
+    user-select: none;
+  }
+  .num { min-width: 1.5em; text-align: right; }
+
+  /* Arrows */
+  .arrow {
+    display: inline-block;
+    font-family: 'EB Garamond', serif;
+    font-weight: 500;
+    color: var(--ink-soft);
+    padding: 0 1px;
+  }
+
+  .status {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: 28px;
+    background: linear-gradient(180deg, #251f1a, #1a1612);
+    border-top: 1px solid #0c0a08;
+    color: rgba(216, 205, 184, 0.55);
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    display: flex; align-items: center;
+    padding: 0 22px; gap: 18px;
+    z-index: 50;
+  }
+  .status .ind { color: var(--chrome-accent); }
+
+  #editor:empty::before,
+  #editor > div:only-child:empty::before {
+    content: attr(data-placeholder);
+    color: var(--ink-faint);
+    font-style: italic;
+    pointer-events: none;
+  }
+
+  .stage::-webkit-scrollbar { width: 10px; }
+  .stage::-webkit-scrollbar-track { background: transparent; }
+  .stage::-webkit-scrollbar-thumb {
+    background: rgba(201, 168, 106, 0.2);
+    border-radius: 5px;
+  }
+  .stage::-webkit-scrollbar-thumb:hover { background: rgba(201, 168, 106, 0.35); }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="brand">Scholia<span class="dot">·</span></div>
+  <div class="toolbar" id="toolbar">
+    <button class="tb-btn" data-fmt="bold" title="Bold (Ctrl+B)"><b>B</b></button>
+    <button class="tb-btn" data-fmt="italic" title="Italic (Ctrl+I)"><i>I</i></button>
+    <button class="tb-btn" data-fmt="underline" title="Underline (Ctrl+U)"><u>U</u></button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn icon" data-action="undo" title="Undo (Ctrl+Z)">↶</button>
+    <button class="tb-btn icon" data-action="redo" title="Redo (Ctrl+Y / Ctrl+Shift+Z)">↷</button>
+    <div class="tb-sep"></div>
+    <button class="tb-btn icon" data-action="size-down" title="Decrease font size (Ctrl+−)">A−</button>
+    <span class="size-display" id="size-display">18</span>
+    <button class="tb-btn icon" data-action="size-up" title="Increase font size (Ctrl+=)">A+</button>
+  </div>
+  <div class="legend">
+    <span><span class="swatch" style="background:var(--c-tilde)"></span>~</span>
+    <span><span class="swatch" style="background:var(--c-bang)"></span>!</span>
+    <span><span class="swatch" style="background:var(--c-at)"></span>@</span>
+    <span><span class="swatch" style="background:var(--c-dollar)"></span>$</span>
+    <span><span class="swatch" style="background:var(--c-percent)"></span>%</span>
+  </div>
+</div>
+
+<div class="stage">
+  <div class="page">
+    <div id="editor" contenteditable="true" spellcheck="true" data-placeholder="Begin writing. Comments: ~ ! @ $ % ^ & -- /* */ [ ]. Headers: #h1, ##h2, ###h3. All open spans close on Enter, Tab, or another opener."></div>
+  </div>
+</div>
+
+<div class="status">
+  <span>indent: <span class="ind" id="st-indent">0</span></span>
+  <span>line: <span class="ind" id="st-line">1</span></span>
+  <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
+</div>
+
+<script>
+/* =====================================================================
+   SCHOLIA — Academic Editor v5
+   ---------------------------------------------------------------------
+   PRINCIPLE
+   ---------
+   Source-of-truth: each line div's textContent is the raw source string.
+   Bold/italic/underline are stored as **bold**, *italic*, __underline__
+   IN THE SOURCE STRING. Markers are NEVER visible to the user
+   (display:none always).
+
+   Comments and headers are "spans" with an opener and closer.
+   - While a span is OPEN (no closer), the opener is visible (faded).
+   - When CLOSED, the opener hides (and stays hidden) unless the caret
+     re-enters that span.
+   - Any opener typed mid-span auto-closes the current and starts a new
+     one. We render this as: existing-content [closer] [space] [new opener].
+     User types `@hello!` and the source becomes `@hello@ !`. Visually:
+     [@hello] [!] (space between).
+   - Tab → inserts closers for any open spans on the current line, at
+     the caret position.
+   - Enter (paragraph) → inserts closers for any open spans, then splits.
+   - Shift+Enter (line break) → inserts a newline within the SAME line
+     div without auto-closing. (We model this as a literal \n in the
+     source string. Render-time, \n becomes <br>.)
+   - Bracket [ ] is special: markers ALWAYS visible. Inside brackets,
+     other comments may nest. Brackets close on ].
+   ===================================================================== */
+
+const editor = document.getElementById('editor');
+const stIndent = document.getElementById('st-indent');
+const stLine = document.getElementById('st-line');
+const sizeDisplay = document.getElementById('size-display');
+
+/* ---------- Font size ---------- */
+const SIZE_MIN = 12, SIZE_MAX = 32, SIZE_STEP = 1;
+let editorSize = 18;
+function applyFontSize() {
+  document.documentElement.style.setProperty('--editor-size', editorSize + 'px');
+  sizeDisplay.textContent = String(editorSize);
+}
+function bumpFontSize(d) {
+  editorSize = Math.max(SIZE_MIN, Math.min(SIZE_MAX, editorSize + d));
+  applyFontSize();
+}
+applyFontSize();
+
+/* ---------- Initial line ---------- */
+function ensureLine() {
+  if (editor.children.length === 0) {
+    const d = document.createElement('div');
+    d.setAttribute('data-indent', '0');
+    d.style.setProperty('--indent', '0');
+    d.appendChild(document.createElement('br'));
+    editor.appendChild(d);
+  }
+}
+ensureLine();
+
+/* ---------- Caret utilities ---------- */
+function getLineDiv(node) {
+  while (node && node !== editor) {
+    if (node.parentNode === editor) return node;
+    node = node.parentNode;
+  }
+  return null;
+}
+
+function getCaretOffsetInLine(lineDiv) {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return 0;
+  const range = sel.getRangeAt(0);
+  if (!lineDiv.contains(range.startContainer) && lineDiv !== range.startContainer) return 0;
+  const pre = range.cloneRange();
+  pre.selectNodeContents(lineDiv);
+  pre.setEnd(range.startContainer, range.startOffset);
+  return pre.toString().length;
+}
+
+function setCaretOffsetInLine(lineDiv, offset) {
+  const sel = window.getSelection();
+  const range = document.createRange();
+  let remaining = offset;
+  let found = false;
+  function walk(node) {
+    if (found) return;
+    if (node.nodeType === Node.TEXT_NODE) {
+      const len = node.nodeValue.length;
+      if (remaining <= len) {
+        range.setStart(node, remaining);
+        range.collapse(true);
+        found = true;
+        return;
+      }
+      remaining -= len;
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.tagName === 'BR') {
+        // br counts as 1 character (the \n in source)
+        if (remaining === 0) {
+          range.setStartBefore(node);
+          range.collapse(true);
+          found = true;
+          return;
+        }
+        remaining -= 1;
+        return;
+      }
+      for (const child of node.childNodes) {
+        walk(child);
+        if (found) return;
+      }
+    }
+  }
+  walk(lineDiv);
+  if (!found) {
+    range.selectNodeContents(lineDiv);
+    range.collapse(false);
+  }
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+/* Source-of-truth: textContent BUT we need to preserve \n for shift+enter
+   line breaks. textContent serializes <br> as nothing, so we use a custom
+   walker. */
+function getLineSource(lineDiv) {
+  let out = '';
+  function walk(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += node.nodeValue;
+    } else if (node.nodeType === Node.ELEMENT_NODE) {
+      if (node.tagName === 'BR') { out += '\n'; return; }
+      for (const c of node.childNodes) walk(c);
+    }
+  }
+  walk(lineDiv);
+  return out;
+}
+
+/* ---------- Comment registry ---------- */
+const SINGLE_CHAR_COMMENTS = [
+  { ch: '~', cls: 'cmt-tilde' },
+  { ch: '!', cls: 'cmt-bang' },
+  { ch: '@', cls: 'cmt-at' },
+  { ch: '$', cls: 'cmt-dollar' },
+  { ch: '%', cls: 'cmt-percent' },
+  { ch: '^', cls: 'cmt-caret' },
+  { ch: '&', cls: 'cmt-amp' }
+];
+const SINGLE_CHAR_SET = new Set(SINGLE_CHAR_COMMENTS.map(c => c.ch));
+function clsForSingleChar(ch) {
+  const c = SINGLE_CHAR_COMMENTS.find(x => x.ch === ch);
+  return c ? c.cls : null;
+}
+
+/* Detect an opener at position i in src. Returns {len, kind, ch?, cls}. */
+function openerAt(src, i) {
+  const c = src[i];
+  if (SINGLE_CHAR_SET.has(c)) return { len: 1, kind: 'single', ch: c, cls: clsForSingleChar(c), open: c, close: c };
+  if (c === '[') return { len: 1, kind: 'bracket', cls: 'cmt-bracket', open: '[', close: ']' };
+  if (c === '/' && src[i+1] === '*') return { len: 2, kind: 'code', cls: 'cmt-code', open: '/*', close: '*/' };
+  if (c === '-' && src[i+1] === '-') return { len: 2, kind: 'dashes', cls: 'cmt-dashes', open: '--', close: '--' };
+  return null;
+}
+
+/* Detect closer for a given opener at position i. Returns len if matched. */
+function closerLenAt(src, i, opener) {
+  if (opener.kind === 'single' || opener.kind === 'bracket') {
+    return src[i] === opener.close ? 1 : 0;
+  }
+  if (opener.kind === 'code') {
+    return (src[i] === '*' && src[i+1] === '/') ? 2 : 0;
+  }
+  if (opener.kind === 'dashes') {
+    return (src[i] === '-' && src[i+1] === '-') ? 2 : 0;
+  }
+  return 0;
+}
+
+/* ---------- Markdown formatting (bold, italic, underline) ----------
+   In source: **bold**, *italic*, __underline__.
+   Markers are display:none, never visible.
+   We tokenize these inline within text segments. */
+
+function escapeHtml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* Render plain text, converting arrow/bullet glyphs to atomic spans
+   and \n to <br>. Also processes markdown formatting. */
+function renderTextSegment(s) {
+  // We process **bold**, __underline__, then *italic*, recursively.
+  return processFormatting(s);
+}
+
+function processFormatting(s) {
+  // Try bold first (longest), then underline, then italic
+  // Use a simple recursive descent.
+  let out = '';
+  let i = 0;
+  const n = s.length;
+  while (i < n) {
+    const ch = s[i];
+    // **bold**
+    if (ch === '*' && s[i+1] === '*') {
+      const close = s.indexOf('**', i + 2);
+      if (close !== -1 && close > i + 2) {
+        const inner = s.slice(i + 2, close);
+        out += `<span class="md md-bold"><span class="md-mark">**</span>${processFormatting(inner)}<span class="md-mark">**</span></span>`;
+        i = close + 2;
+        continue;
+      }
+    }
+    // __underline__
+    if (ch === '_' && s[i+1] === '_') {
+      const close = s.indexOf('__', i + 2);
+      if (close !== -1 && close > i + 2) {
+        const inner = s.slice(i + 2, close);
+        out += `<span class="md md-underline"><span class="md-mark">__</span>${processFormatting(inner)}<span class="md-mark">__</span></span>`;
+        i = close + 2;
+        continue;
+      }
+    }
+    // *italic* (single *, not part of **)
+    if (ch === '*' && s[i+1] !== '*' && s[i-1] !== '*') {
+      // find single * close, not adjacent to another *
+      let k = i + 1;
+      let close = -1;
+      while (k < n) {
+        if (s[k] === '*' && s[k+1] !== '*' && s[k-1] !== '*') { close = k; break; }
+        k++;
+      }
+      if (close !== -1 && close > i + 1) {
+        const inner = s.slice(i + 1, close);
+        out += `<span class="md md-italic"><span class="md-mark">*</span>${processFormatting(inner)}<span class="md-mark">*</span></span>`;
+        i = close + 1;
+        continue;
+      }
+    }
+    // Plain char
+    if (ch === '\n') { out += '<br>'; i++; continue; }
+    if (ch === '\u2192' || ch === '\u2190') {
+      out += `<span class="arrow">${ch}</span>`;
+      i++; continue;
+    }
+    if (ch === '\u2022' || ch === '\u25E6' || ch === '\u25AA') {
+      out += `<span class="bullet">${ch}</span>`;
+      i++; continue;
+    }
+    out += escapeHtml(ch);
+    i++;
+  }
+  return out;
+}
+
+/* ---------- Tokenize one line's body (after header/list prefix) ----------
+   Walks the source and produces HTML, recognizing comment openers.
+   - When an opener is found, scan for its closer or the next opener.
+   - Render as a comment span; if no closer found before next opener
+     or end, mark the span with class `open`.
+   - Inside bracket: recurse (nested comments allowed).
+   - Inside other comments: NO nesting (per principle "another opener
+     closes current"). The tokenizer at top level will close-and-reopen.
+*/
+function tokenizeBody(src, start, end) {
+  let html = '';
+  let i = start;
+  while (i < end) {
+    const opener = openerAt(src, i);
+    if (opener) {
+      const contentStart = i + opener.len;
+      // Find closer or next opener (for non-bracket non-code).
+      // Inside bracket and code, only their own closer (and end) terminates.
+      let closeAt = -1;        // index of closer
+      let closeLen = 0;
+      let closedByOpener = false;
+
+      let k = contentStart;
+      while (k < end) {
+        // For non-bracket, non-code: another opener auto-closes
+        if (opener.kind !== 'bracket' && opener.kind !== 'code') {
+          const otherOpener = openerAt(src, k);
+          if (otherOpener) {
+            closeAt = k;
+            closeLen = 0;
+            closedByOpener = true;
+            break;
+          }
+        }
+        // Look for matching closer
+        const cl = closerLenAt(src, k, opener);
+        if (cl > 0) {
+          closeAt = k;
+          closeLen = cl;
+          break;
+        }
+        // ] also closes any non-bracket span
+        if (opener.kind !== 'bracket' && src[k] === ']') {
+          closeAt = k;
+          closeLen = 0; // don't consume the ]
+          break;
+        }
+        k++;
+      }
+
+      const isOpen = (closeAt === -1) || closedByOpener || (closeAt !== -1 && closeLen === 0 && opener.kind !== 'bracket');
+      // Wait — let me reconsider. "Open" means no explicit closer was found.
+      // closedByOpener means we hit another opener (no closer); that's still
+      // "open" in source terms but visually the span ends here.
+      // For visual style: if no MATCHING closer exists, it's open (opener
+      // marker should remain visible).
+      const hasMatchingClose = (closeAt !== -1 && closeLen > 0);
+
+      const contentEnd = closeAt === -1 ? end : closeAt;
+
+      // Build span
+      const openClasses = ['cmt', opener.cls];
+      if (!hasMatchingClose) openClasses.push('open');
+      html += `<span class="${openClasses.join(' ')}" data-cmt="1">`;
+      html += `<span class="marker marker-open">${escapeHtml(opener.open)}</span>`;
+
+      // Render inner content
+      if (opener.kind === 'bracket') {
+        html += tokenizeBody(src, contentStart, contentEnd);
+      } else if (opener.kind === 'code') {
+        html += escapeHtml(src.slice(contentStart, contentEnd));
+      } else {
+        // formatting allowed inside, but no nested comments
+        html += processFormatting(src.slice(contentStart, contentEnd));
+      }
+
+      if (hasMatchingClose) {
+        html += `<span class="marker marker-close">${escapeHtml(opener.close)}</span>`;
+      }
+      html += `</span>`;
+
+      i = closeAt === -1 ? end : (closeAt + closeLen);
+      continue;
+    }
+    // Plain run until next opener
+    let j = i;
+    while (j < end && !openerAt(src, j)) j++;
+    html += processFormatting(src.slice(i, j));
+    i = j;
+  }
+  return html;
+}
+
+/* ---------- Bullet / numbered prefix ---------- */
+const BULLET_GLYPHS = ['\u2022', '\u25E6', '\u25AA'];
+function isBulletChar(ch) { return BULLET_GLYPHS.includes(ch); }
+const NUM_PREFIX_RE = /^(\d+|[a-z]+|[ivxlcdm]+|[A-Z]+|[IVXLCDM]+)\. /;
+
+/* ---------- Header detection ---------- */
+function detectHeader(src) {
+  // Header lifecycle:
+  // - Source starts with one or more #'s up to 3, then content.
+  // - "#" alone or "##" alone with nothing after → not yet a header (just typing)
+  // - "#x", "##x", "###x" → header level 1/2/3
+  // - Trailing close marker (a single # at the very end) is allowed but optional
+  let i = 0;
+  while (i < src.length && i < 3 && src[i] === '#') i++;
+  if (i === 0) return null;
+  if (i === src.length) return null;       // just "#" or "##" or "###"
+  if (src[i] === '#') return null;          // "####..." not supported
+  // Allow optional trailing # for explicit closing (markdown convention)
+  let contentEnd = src.length;
+  // Detect trailing single # preceded by space
+  if (src.length >= 2 && src[src.length - 1] === '#' && src[src.length - 2] === ' ') {
+    contentEnd = src.length - 1;
+  }
+  return { level: i, contentStart: i, contentEnd };
+}
+
+/* ---------- Tokenize one line ---------- */
+function tokenizeLineHTML(lineDiv) {
+  lineDiv.classList.remove('line-h', 'line-h1', 'line-h2', 'line-h3');
+  const src = getLineSource(lineDiv);
+  if (src === '') return '<br>';
+
+  // Header
+  const hdr = detectHeader(src);
+  if (hdr) {
+    lineDiv.classList.add('line-h', `line-h${hdr.level}`);
+    const hashes = '#'.repeat(hdr.level);
+    const inner = tokenizeBody(src, hdr.contentStart, hdr.contentEnd);
+    const trailing = hdr.contentEnd < src.length
+      ? `<span class="h-mark">${'#'}</span>` : '';
+    return `<span class="h-mark">${hashes}</span><span class="h${hdr.level}">${inner}</span>${trailing}`;
+  }
+
+  // Bullet prefix
+  if (src.length >= 2 && isBulletChar(src[0]) && src[1] === ' ') {
+    return `<span class="bullet">${src[0]}</span> ${tokenizeBody(src, 2, src.length)}`;
+  }
+
+  // Numbered prefix
+  const nm = src.match(NUM_PREFIX_RE);
+  if (nm) {
+    return `<span class="num">${escapeHtml(nm[0].trimEnd())}</span> ${tokenizeBody(src, nm[0].length, src.length)}`;
+  }
+
+  return tokenizeBody(src, 0, src.length);
+}
+
+/* ---------- Render ---------- */
+let isRendering = false;
+function selectionIsCollapsed() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return true;
+  return sel.getRangeAt(0).collapsed;
+}
+
+function renderAll() {
+  if (!selectionIsCollapsed()) { updateStatus(); return; }
+  if (isRendering) return;
+  isRendering = true;
+
+  const sel = window.getSelection();
+  let activeIndex = -1, activeOffset = 0;
+  if (sel.rangeCount) {
+    const lineDiv = getLineDiv(sel.getRangeAt(0).startContainer);
+    if (lineDiv) {
+      activeIndex = Array.from(editor.children).indexOf(lineDiv);
+      activeOffset = getCaretOffsetInLine(lineDiv);
+    }
+  }
+
+  Array.from(editor.children).forEach(line => {
+    const html = tokenizeLineHTML(line);
+    if (line.innerHTML !== html) line.innerHTML = html;
+  });
+
+  // Restore caret + apply .raw to comment containing it
+  if (activeIndex >= 0 && editor.children[activeIndex]) {
+    const lineDiv = editor.children[activeIndex];
+    setCaretOffsetInLine(lineDiv, activeOffset);
+
+    const newSel = window.getSelection();
+    if (newSel.rangeCount) {
+      const r = newSel.getRangeAt(0);
+      let node = r.startContainer;
+      while (node && node !== editor) {
+        if (node.nodeType === Node.ELEMENT_NODE && node.dataset && node.dataset.cmt === '1') {
+          node.classList.add('raw');
+        }
+        node = node.parentNode;
+      }
+      if (lineDiv.classList.contains('line-h')) lineDiv.classList.add('raw');
+    }
+  }
+
+  updateStatus();
+  updateToolbarState();
+  isRendering = false;
+}
+
+function updateStatus() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const lineDiv = getLineDiv(sel.getRangeAt(0).startContainer);
+  if (!lineDiv) return;
+  const idx = Array.from(editor.children).indexOf(lineDiv);
+  stLine.textContent = (idx + 1).toString();
+  stIndent.textContent = lineDiv.dataset.indent || '0';
+}
+
+function updateToolbarState() {
+  // Reflect whether caret is inside a **/*/__ span
+  if (!selectionIsCollapsed()) {
+    document.querySelectorAll('.tb-btn[data-fmt]').forEach(b => b.classList.remove('active'));
+    return;
+  }
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  let node = sel.getRangeAt(0).startContainer;
+  let hasBold = false, hasItalic = false, hasUnderline = false;
+  while (node && node !== editor) {
+    if (node.nodeType === Node.ELEMENT_NODE && node.classList) {
+      if (node.classList.contains('md-bold')) hasBold = true;
+      if (node.classList.contains('md-italic')) hasItalic = true;
+      if (node.classList.contains('md-underline')) hasUnderline = true;
+    }
+    node = node.parentNode;
+  }
+  const states = { bold: hasBold, italic: hasItalic, underline: hasUnderline };
+  document.querySelectorAll('.tb-btn[data-fmt]').forEach(b => {
+    b.classList.toggle('active', !!states[b.dataset.fmt]);
+  });
+}
+
+/* ---------- Indent ---------- */
+function getIndent(lineDiv) { return parseInt(lineDiv.dataset.indent || '0', 10); }
+function setIndent(lineDiv, n) {
+  n = Math.max(0, Math.min(n, 12));
+  lineDiv.dataset.indent = String(n);
+  lineDiv.style.setProperty('--indent', String(n));
+}
+
+/* ---------- "What's open at this caret position?" ----------
+   Walk source from start to caretOffset, tracking which comment is
+   currently open at the caret. Return the opener info, or null. */
+function openSpanAtCaret(lineDiv) {
+  const src = getLineSource(lineDiv);
+  const caret = getCaretOffsetInLine(lineDiv);
+  let i = 0;
+  let stack = []; // for brackets only
+  while (i < caret) {
+    const opener = openerAt(src, i);
+    if (opener) {
+      // Peek: does this span close before caret?
+      let k = i + opener.len;
+      let endIdx = -1;
+      while (k < caret) {
+        // Another opener ends non-bracket spans
+        if (opener.kind !== 'bracket' && opener.kind !== 'code') {
+          const oth = openerAt(src, k);
+          if (oth) { endIdx = k; break; }
+        }
+        const cl = closerLenAt(src, k, opener);
+        if (cl > 0) { endIdx = k + cl; break; }
+        if (opener.kind !== 'bracket' && src[k] === ']') { endIdx = k; break; }
+        k++;
+      }
+      if (endIdx === -1) {
+        // Open at caret
+        return { opener, openIdx: i };
+      }
+      i = endIdx;
+    } else {
+      i++;
+    }
+  }
+  return null;
+}
+
+/* List ALL unclosed openers on a line, in order, as of position `pos`.
+   For closing-on-Enter or Tab: insert each closer in reverse. */
+function unclosedOpeners(src, pos) {
+  const opens = [];
+  let i = 0;
+  while (i < pos) {
+    const opener = openerAt(src, i);
+    if (opener) {
+      // Check if it has a matching closer before pos
+      let k = i + opener.len;
+      let closed = false;
+      while (k < pos) {
+        if (opener.kind !== 'bracket' && opener.kind !== 'code') {
+          const oth = openerAt(src, k);
+          if (oth) { closed = true; break; }   // closed by another opener
+        }
+        const cl = closerLenAt(src, k, opener);
+        if (cl > 0) { closed = true; k += cl; break; }
+        if (opener.kind !== 'bracket' && src[k] === ']') { closed = true; break; }
+        k++;
+      }
+      if (!closed) {
+        opens.push({ opener, openIdx: i });
+        i += opener.len;
+      } else {
+        i = k;
+      }
+    } else {
+      i++;
+    }
+  }
+  return opens;
+}
+
+/* ---------- Undo/Redo ---------- */
+const HISTORY_LIMIT = 200;
+let undoStack = [];
+let redoStack = [];
+let typingTimer = null;
+let pendingTypingSnapshot = false;
+
+function captureSnapshot() {
+  const sel = window.getSelection();
+  let activeIndex = -1, activeOffset = 0;
+  if (sel.rangeCount) {
+    const lineDiv = getLineDiv(sel.getRangeAt(0).startContainer);
+    if (lineDiv) {
+      activeIndex = Array.from(editor.children).indexOf(lineDiv);
+      activeOffset = getCaretOffsetInLine(lineDiv);
+    }
+  }
+  return {
+    lines: Array.from(editor.children).map(d => ({
+      src: getLineSource(d),
+      indent: getIndent(d)
+    })),
+    activeIndex,
+    activeOffset
+  };
+}
+function snapshotsEqual(a, b) {
+  if (!a || !b) return false;
+  if (a.lines.length !== b.lines.length) return false;
+  for (let i = 0; i < a.lines.length; i++) {
+    if (a.lines[i].src !== b.lines[i].src) return false;
+    if (a.lines[i].indent !== b.lines[i].indent) return false;
+  }
+  return true;
+}
+function pushUndo(snap) {
+  if (!snap) snap = captureSnapshot();
+  const top = undoStack[undoStack.length - 1];
+  if (top && snapshotsEqual(top, snap)) return;
+  undoStack.push(snap);
+  if (undoStack.length > HISTORY_LIMIT) undoStack.shift();
+  redoStack = [];
+}
+function restoreSnapshot(snap) {
+  editor.innerHTML = '';
+  snap.lines.forEach(l => {
+    const d = document.createElement('div');
+    setIndent(d, l.indent);
+    // Source may contain \n — we need to render those as <br>, so set
+    // innerHTML based on a quick conversion.
+    setLineSource(d, l.src);
+    editor.appendChild(d);
+  });
+  ensureLine();
+  if (snap.activeIndex >= 0 && editor.children[snap.activeIndex]) {
+    setCaretOffsetInLine(editor.children[snap.activeIndex], snap.activeOffset);
+  }
+  renderAll();
+}
+function doUndo() {
+  flushTypingSnapshot();
+  if (undoStack.length < 2) return;
+  redoStack.push(undoStack.pop());
+  restoreSnapshot(undoStack[undoStack.length - 1]);
+}
+function doRedo() {
+  if (!redoStack.length) return;
+  const next = redoStack.pop();
+  undoStack.push(next);
+  restoreSnapshot(next);
+}
+function scheduleTypingSnapshot() {
+  pendingTypingSnapshot = true;
+  if (typingTimer) clearTimeout(typingTimer);
+  typingTimer = setTimeout(() => {
+    if (pendingTypingSnapshot) { pushUndo(); pendingTypingSnapshot = false; }
+  }, 600);
+}
+function flushTypingSnapshot() {
+  if (typingTimer) { clearTimeout(typingTimer); typingTimer = null; }
+  if (pendingTypingSnapshot) { pushUndo(); pendingTypingSnapshot = false; }
+}
+const WORD_BOUNDARY_CHARS = new Set([
+  ' ', '.', ',', ';', ':', '!', '?', '"', "'", '(', ')',
+  '{', '}', '/', '\\', '|'
+]);
+function isWordBoundaryKey(e) {
+  if (e.key.length !== 1) return false;
+  if (e.ctrlKey || e.altKey || e.metaKey) return false;
+  return WORD_BOUNDARY_CHARS.has(e.key);
+}
+
+/* ---------- Set a line's source string (handles \n → <br>) ---------- */
+function setLineSource(lineDiv, src) {
+  if (src === '') {
+    lineDiv.innerHTML = '<br>';
+    return;
+  }
+  // Build text + <br> nodes
+  lineDiv.innerHTML = '';
+  const parts = src.split('\n');
+  parts.forEach((part, i) => {
+    if (i > 0) lineDiv.appendChild(document.createElement('br'));
+    if (part.length > 0) lineDiv.appendChild(document.createTextNode(part));
+  });
+}
+
+pushUndo();
+
+/* ---------- Input ---------- */
+let didAutoConvert = false;
+
+editor.addEventListener('input', () => {
+  ensureLine();
+  didAutoConvert = false;
+  autoConvertAroundCaret();
+  renderAll();
+  if (!didAutoConvert) scheduleTypingSnapshot();
+});
+
+editor.addEventListener('click', () => {
+  if (selectionIsCollapsed()) renderAll();
+  else { updateStatus(); updateToolbarState(); }
+});
+
+editor.addEventListener('keyup', (e) => {
+  if (['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End'].includes(e.key)) {
+    if (selectionIsCollapsed()) renderAll();
+    else { updateStatus(); updateToolbarState(); }
+  }
+});
+
+document.addEventListener('selectionchange', () => {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  if (!editor.contains(sel.anchorNode)) return;
+  updateStatus();
+  updateToolbarState();
+});
+
+editor.addEventListener('keydown', handleKeyDown);
+
+function handleKeyDown(e) {
+  // Undo/redo
+  if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z') && !e.shiftKey) {
+    e.preventDefault(); doUndo(); return;
+  }
+  if ((e.ctrlKey || e.metaKey) && ((e.key === 'y' || e.key === 'Y') || ((e.key === 'z' || e.key === 'Z') && e.shiftKey))) {
+    e.preventDefault(); doRedo(); return;
+  }
+  // Font size
+  if ((e.ctrlKey || e.metaKey) && (e.key === '=' || e.key === '+')) {
+    e.preventDefault(); bumpFontSize(SIZE_STEP); return;
+  }
+  if ((e.ctrlKey || e.metaKey) && (e.key === '-' || e.key === '_')) {
+    e.preventDefault(); bumpFontSize(-SIZE_STEP); return;
+  }
+  if ((e.ctrlKey || e.metaKey) && e.key === '0') {
+    e.preventDefault(); editorSize = 18; applyFontSize(); return;
+  }
+  // Bold/italic/underline → wrap in markdown markers
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+    if (e.key === 'b' || e.key === 'B') { e.preventDefault(); wrapSelection('**', '**'); return; }
+    if (e.key === 'i' || e.key === 'I') { e.preventDefault(); wrapSelection('*',  '*');  return; }
+    if (e.key === 'u' || e.key === 'U') { e.preventDefault(); wrapSelection('__', '__'); return; }
+  }
+
+  if (isWordBoundaryKey(e)) flushTypingSnapshot();
+
+  // Tab / Shift+Tab
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    flushTypingSnapshot();
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+
+    // Multi-line selection: indent every selected line
+    if (!sel.isCollapsed) {
+      const range = sel.getRangeAt(0);
+      const startLine = getLineDiv(range.startContainer);
+      const endLine = getLineDiv(range.endContainer);
+      if (startLine && endLine) {
+        const lines = [];
+        let node = startLine;
+        while (node) {
+          lines.push(node);
+          if (node === endLine) break;
+          node = node.nextElementSibling;
+        }
+        lines.forEach(l => setIndent(l, getIndent(l) + (e.shiftKey ? -1 : 1)));
+        pushUndo();
+        updateStatus();
+        return;
+      }
+    }
+
+    // Collapsed: priority — open span close, then bullet nest, then indent
+    const lineDiv = getLineDiv(sel.getRangeAt(0).startContainer);
+    if (!lineDiv) return;
+    const src = getLineSource(lineDiv);
+    const caret = getCaretOffsetInLine(lineDiv);
+    const opens = unclosedOpeners(src, caret);
+    if (opens.length > 0 && !e.shiftKey) {
+      // Insert closer for the innermost open span at caret
+      const innermost = opens[opens.length - 1];
+      const closer = innermost.opener.close;
+      const newSrc = src.slice(0, caret) + closer + src.slice(caret);
+      setLineSource(lineDiv, newSrc);
+      renderAll();
+      setCaretOffsetInLine(lineDiv, caret + closer.length);
+      renderAll();
+      pushUndo();
+      return;
+    }
+    if (isBulletChar(src[0]) && src[1] === ' ') {
+      nestBullet(lineDiv, !e.shiftKey);
+      renderAll();
+      pushUndo();
+      return;
+    }
+    setIndent(lineDiv, getIndent(lineDiv) + (e.shiftKey ? -1 : 1));
+    pushUndo();
+    updateStatus();
+    return;
+  }
+
+  // Enter (paragraph break) — close all open spans first, then split
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    flushTypingSnapshot();
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    if (!sel.isCollapsed) deleteSelectionRange();
+    const range = window.getSelection().getRangeAt(0);
+    const lineDiv = getLineDiv(range.startContainer);
+    if (!lineDiv) return;
+
+    const src = getLineSource(lineDiv);
+    const caret = getCaretOffsetInLine(lineDiv);
+
+    // Close all open spans at caret position by inserting their closers
+    // (innermost first)
+    const opens = unclosedOpeners(src, caret);
+    let closerStr = '';
+    for (let i = opens.length - 1; i >= 0; i--) {
+      closerStr += opens[i].opener.close;
+    }
+
+    let before = src.slice(0, caret) + closerStr;
+    let after = src.slice(caret);
+
+    // List continuation: bullet/numbered prefix carries to next line
+    let nextLineSrc = after;
+    let extraCaret = 0;
+    if (isBulletChar(src[0]) && src[1] === ' ') {
+      if (src.slice(2) === '' && caret === src.length) {
+        // empty bullet line + Enter → clear bullet, end list
+        setLineSource(lineDiv, '');
+        renderAll();
+        pushUndo();
+        return;
+      }
+      if (caret >= 2) {
+        nextLineSrc = src[0] + ' ' + after;
+        extraCaret = 2;
+      }
+    } else {
+      const nm = src.match(NUM_PREFIX_RE);
+      if (nm) {
+        if (src.slice(nm[0].length) === '' && caret === src.length) {
+          setLineSource(lineDiv, '');
+          renderAll();
+          pushUndo();
+          return;
+        }
+        if (caret >= nm[0].length) {
+          let next = nm[1];
+          if (/^\d+$/.test(next)) next = String(parseInt(next, 10) + 1);
+          nextLineSrc = next + '. ' + after;
+          extraCaret = next.length + 2;
+        }
+      }
+    }
+
+    setLineSource(lineDiv, before);
+    const newLine = document.createElement('div');
+    setIndent(newLine, getIndent(lineDiv));
+    setLineSource(newLine, nextLineSrc);
+    lineDiv.after(newLine);
+    setCaretOffsetInLine(newLine, extraCaret);
+    renderAll();
+    pushUndo();
+    return;
+  }
+
+  // Shift+Enter (line break, no close) — insert \n in source
+  if (e.key === 'Enter' && e.shiftKey) {
+    e.preventDefault();
+    flushTypingSnapshot();
+    const sel = window.getSelection();
+    if (!sel.rangeCount) return;
+    if (!sel.isCollapsed) deleteSelectionRange();
+    const range = window.getSelection().getRangeAt(0);
+    const lineDiv = getLineDiv(range.startContainer);
+    if (!lineDiv) return;
+    const caret = getCaretOffsetInLine(lineDiv);
+    const src = getLineSource(lineDiv);
+    setLineSource(lineDiv, src.slice(0, caret) + '\n' + src.slice(caret));
+    renderAll();
+    setCaretOffsetInLine(lineDiv, caret + 1);
+    renderAll();
+    pushUndo();
+    return;
+  }
+
+  // Backspace
+  if (e.key === 'Backspace') {
+    const sel = window.getSelection();
+    if (sel.rangeCount && sel.isCollapsed) {
+      const range = sel.getRangeAt(0);
+      const lineDiv = getLineDiv(range.startContainer);
+      if (lineDiv) {
+        const caret = getCaretOffsetInLine(lineDiv);
+        if (caret === 0) {
+          const cur = getIndent(lineDiv);
+          if (cur > 0) {
+            e.preventDefault();
+            flushTypingSnapshot();
+            setIndent(lineDiv, cur - 1);
+            pushUndo();
+            updateStatus();
+            return;
+          }
+          const prev = lineDiv.previousElementSibling;
+          if (prev) {
+            e.preventDefault();
+            flushTypingSnapshot();
+            const prevSrc = getLineSource(prev);
+            const curSrc = getLineSource(lineDiv);
+            const merged = prevSrc + curSrc;
+            setLineSource(prev, merged);
+            lineDiv.remove();
+            renderAll();
+            setCaretOffsetInLine(prev, prevSrc.length);
+            renderAll();
+            pushUndo();
+            return;
+          }
+        }
+        const src = getLineSource(lineDiv);
+        // Atomic-delete bullet "• " at line start
+        if (caret >= 2 && isBulletChar(src[caret - 2]) && src[caret - 1] === ' ') {
+          e.preventDefault();
+          flushTypingSnapshot();
+          setLineSource(lineDiv, src.slice(0, caret - 2) + src.slice(caret));
+          renderAll();
+          setCaretOffsetInLine(lineDiv, caret - 2);
+          renderAll();
+          pushUndo();
+          return;
+        }
+        // Atomic-delete arrow
+        if (caret >= 1 && (src[caret - 1] === '\u2192' || src[caret - 1] === '\u2190')) {
+          e.preventDefault();
+          flushTypingSnapshot();
+          setLineSource(lineDiv, src.slice(0, caret - 1) + src.slice(caret));
+          renderAll();
+          setCaretOffsetInLine(lineDiv, caret - 1);
+          renderAll();
+          pushUndo();
+          return;
+        }
+      }
+    } else if (sel.rangeCount && !sel.isCollapsed) {
+      flushTypingSnapshot();
+      setTimeout(() => pushUndo(), 0);
+    }
+  }
+}
+
+/* ---------- Wrap selection with markdown markers ---------- */
+function wrapSelection(open, close) {
+  flushTypingSnapshot();
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+
+  if (range.collapsed) {
+    const lineDiv = getLineDiv(range.startContainer);
+    if (!lineDiv) return;
+    const caret = getCaretOffsetInLine(lineDiv);
+    const src = getLineSource(lineDiv);
+    setLineSource(lineDiv, src.slice(0, caret) + open + close + src.slice(caret));
+    renderAll();
+    setCaretOffsetInLine(lineDiv, caret + open.length);
+    renderAll();
+    pushUndo();
+    return;
+  }
+  const startLine = getLineDiv(range.startContainer);
+  const endLine = getLineDiv(range.endContainer);
+  if (!startLine || startLine !== endLine) return;
+  const startOffset = (() => {
+    const r = range.cloneRange();
+    r.selectNodeContents(startLine);
+    r.setEnd(range.startContainer, range.startOffset);
+    return r.toString().length;
+  })();
+  const endOffset = (() => {
+    const r = range.cloneRange();
+    r.selectNodeContents(endLine);
+    r.setEnd(range.endContainer, range.endOffset);
+    return r.toString().length;
+  })();
+  const src = getLineSource(startLine);
+  const inner = src.slice(startOffset, endOffset);
+  setLineSource(startLine, src.slice(0, startOffset) + open + inner + close + src.slice(endOffset));
+  renderAll();
+  setCaretOffsetInLine(startLine, endOffset + open.length + close.length);
+  renderAll();
+  pushUndo();
+}
+
+/* ---------- Bullet nest ---------- */
+function nestBullet(lineDiv, deeper) {
+  const src = getLineSource(lineDiv);
+  if (!isBulletChar(src[0]) || src[1] !== ' ') return false;
+  const depth = BULLET_GLYPHS.indexOf(src[0]);
+  let nd = depth + (deeper ? 1 : -1);
+  nd = Math.max(0, Math.min(BULLET_GLYPHS.length - 1, nd));
+  const caret = getCaretOffsetInLine(lineDiv);
+  setLineSource(lineDiv, BULLET_GLYPHS[nd] + ' ' + src.slice(2));
+  setCaretOffsetInLine(lineDiv, caret);
+  return true;
+}
+
+/* ---------- Delete selection range ---------- */
+function deleteSelectionRange() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  if (range.collapsed) return;
+  range.deleteContents();
+  Array.from(editor.children).forEach(d => {
+    if (!d.innerHTML.trim()) d.innerHTML = '<br>';
+  });
+}
+
+/* ---------- Auto-convert ---------- */
+function autoConvertAroundCaret() {
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  const range = sel.getRangeAt(0);
+  const lineDiv = getLineDiv(range.startContainer);
+  if (!lineDiv) return;
+  const caret = getCaretOffsetInLine(lineDiv);
+  const src = getLineSource(lineDiv);
+
+  if (caret === 2 && src.startsWith('- ')) {
+    flushTypingSnapshot();
+    setLineSource(lineDiv, '\u2022 ' + src.slice(2));
+    setCaretOffsetInLine(lineDiv, 2);
+    didAutoConvert = true;
+    queueMicrotask(() => pushUndo());
+    return;
+  }
+  if (caret >= 3 && src.slice(caret - 3, caret) === '-> ') {
+    flushTypingSnapshot();
+    setLineSource(lineDiv, src.slice(0, caret - 3) + '\u2192 ' + src.slice(caret));
+    setCaretOffsetInLine(lineDiv, caret - 1);
+    didAutoConvert = true;
+    queueMicrotask(() => pushUndo());
+    return;
+  }
+  if (caret >= 3 && src.slice(caret - 3, caret) === '<- ') {
+    flushTypingSnapshot();
+    setLineSource(lineDiv, src.slice(0, caret - 3) + '\u2190 ' + src.slice(caret));
+    setCaretOffsetInLine(lineDiv, caret - 1);
+    didAutoConvert = true;
+    queueMicrotask(() => pushUndo());
+    return;
+  }
+}
+
+/* ---------- Paste ---------- */
+editor.addEventListener('paste', (e) => {
+  e.preventDefault();
+  flushTypingSnapshot();
+  const html = e.clipboardData.getData('text/html');
+  const text = e.clipboardData.getData('text/plain');
+  let lines;
+  if (html) {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    sanitizeForPaste(tmp);
+    lines = (tmp.textContent || '').split(/\r?\n/);
+  } else {
+    lines = (text || '').split(/\r?\n/);
+  }
+  while (lines.length > 1 && lines[lines.length - 1] === '') lines.pop();
+
+  const sel = window.getSelection();
+  if (!sel.rangeCount) return;
+  if (!sel.isCollapsed) deleteSelectionRange();
+  const range = window.getSelection().getRangeAt(0);
+  const lineDiv = getLineDiv(range.startContainer);
+  if (!lineDiv) return;
+  const caret = getCaretOffsetInLine(lineDiv);
+  const src = getLineSource(lineDiv);
+  const before = src.slice(0, caret);
+  const after = src.slice(caret);
+
+  if (lines.length === 1) {
+    setLineSource(lineDiv, before + lines[0] + after);
+    renderAll();
+    setCaretOffsetInLine(lineDiv, (before + lines[0]).length);
+    renderAll();
+    pushUndo();
+    return;
+  }
+  setLineSource(lineDiv, before + lines[0]);
+  let prev = lineDiv;
+  for (let i = 1; i < lines.length; i++) {
+    const nl = document.createElement('div');
+    setIndent(nl, getIndent(lineDiv));
+    setLineSource(nl, (i === lines.length - 1) ? lines[i] + after : lines[i]);
+    prev.after(nl);
+    prev = nl;
+  }
+  renderAll();
+  setCaretOffsetInLine(prev, lines[lines.length - 1].length);
+  renderAll();
+  pushUndo();
+});
+
+function sanitizeForPaste(root) {
+  const blockTags = new Set(['DIV','P','LI','BR','H1','H2','H3','H4','H5','H6','BLOCKQUOTE']);
+  function process(node) {
+    const children = Array.from(node.childNodes);
+    for (const child of children) {
+      if (child.nodeType !== Node.ELEMENT_NODE) continue;
+      if (blockTags.has(child.tagName)) {
+        process(child);
+        const frag = document.createDocumentFragment();
+        while (child.firstChild) frag.appendChild(child.firstChild);
+        frag.appendChild(document.createTextNode('\n'));
+        node.replaceChild(frag, child);
+      } else {
+        process(child);
+        while (child.firstChild) node.insertBefore(child.firstChild, child);
+        node.removeChild(child);
+      }
+    }
+  }
+  process(root);
+}
+
+/* ---------- Toolbar ---------- */
+document.getElementById('toolbar').addEventListener('mousedown', (e) => {
+  const btn = e.target.closest('.tb-btn');
+  if (!btn) return;
+  e.preventDefault();
+  if (btn.dataset.fmt) {
+    editor.focus();
+    const map = { bold: ['**','**'], italic: ['*','*'], underline: ['__','__'] };
+    const m = map[btn.dataset.fmt];
+    if (m) wrapSelection(m[0], m[1]);
+    return;
+  }
+  const action = btn.dataset.action;
+  if (action === 'undo') doUndo();
+  else if (action === 'redo') doRedo();
+  else if (action === 'size-up') bumpFontSize(SIZE_STEP);
+  else if (action === 'size-down') bumpFontSize(-SIZE_STEP);
+});
+
+/* ---------- Init ---------- */
+renderAll();
+editor.focus();
+</script>
+</body>
+</html>

@@ -879,8 +879,8 @@ function detectHeader(src) {
   return { level: i, contentStart: i, contentEnd };
 }
 
-/* Compute whether src ends still inside an unclosed /* ... */ given the
-   in-code state at the start. Used to propagate code state across lines. */
+// Compute whether src ends still inside an unclosed /* ... */ given the
+//   in-code state at the start. Used to propagate code state across lines.
 function endsInCodeBlock(src, startInCode) {
   let inCode = startInCode;
   let i = 0;

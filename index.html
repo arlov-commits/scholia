@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<!-- v6.2 -->
+<!-- v6.3 -->
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="version" content="v6.2">
+<meta name="version" content="v6.3">
 <title>Scholia — Academic Editor</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='10' fill='%23221c17'/><path d='M44 12 L52 20 L26 46 L18 46 L18 38 Z' fill='%23c9a86a'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -48,7 +48,7 @@
     --chrome-accent:#c9a86a;
     --rule:         #cbbfa3;
 
-    --editor-size: 18px;
+    --editor-size: 23px;
   }
 
   * { box-sizing: border-box; }
@@ -391,12 +391,12 @@
   <span>indent: <span class="ind" id="st-indent">0</span></span>
   <span>line: <span class="ind" id="st-line">1</span></span>
   <span style="margin-left:auto">⇥ closes / nests / indents · ↵ closes all open spans · ⇧↵ line break, no close · -&gt; → → · - → •</span>
-  <span style="margin-left:18px;opacity:0.4">v6.2</span>
+  <span style="margin-left:18px;opacity:0.4">v6.3</span>
 </div>
 
 <script>
 /* =====================================================================
-   SCHOLIA — Academic Editor v6.2
+   SCHOLIA — Academic Editor v6.3
    ---------------------------------------------------------------------
    PRINCIPLE
    ---------
@@ -429,11 +429,12 @@ const stLine = document.getElementById('st-line');
 const sizeDisplay = document.getElementById('size-display');
 
 /* ---------- Font size ---------- */
-const SIZE_MIN = 12, SIZE_MAX = 32, SIZE_STEP = 1;
-let editorSize = 18;
+const SIZE_MIN = 23, SIZE_MAX = 43, SIZE_STEP = 1;
+const SIZE_DISPLAY_OFFSET = 11; // 23px displays as "12"
+let editorSize = 23;
 function applyFontSize() {
   document.documentElement.style.setProperty('--editor-size', editorSize + 'px');
-  sizeDisplay.textContent = String(editorSize);
+  sizeDisplay.textContent = String(editorSize - SIZE_DISPLAY_OFFSET);
 }
 function bumpFontSize(d) {
   editorSize = Math.max(SIZE_MIN, Math.min(SIZE_MAX, editorSize + d));
@@ -1168,13 +1169,15 @@ function handleKeyDown(e) {
     const caret = getCaretOffsetInLine(lineDiv);
     const opens = unclosedOpeners(src, caret);
     if (opens.length > 0 && !e.shiftKey) {
-      // Insert closer for the innermost open span at caret
+      // Insert closer for the innermost open span at caret, then a space
+      // so the caret lands outside the span (keeping markers hidden).
       const innermost = opens[opens.length - 1];
       const closer = innermost.opener.close;
-      const newSrc = src.slice(0, caret) + closer + src.slice(caret);
+      const needsSpace = src[caret] !== ' ';
+      const newSrc = src.slice(0, caret) + closer + (needsSpace ? ' ' : '') + src.slice(caret);
       setLineSource(lineDiv, newSrc);
       renderAll();
-      setCaretOffsetInLine(lineDiv, caret + closer.length);
+      setCaretOffsetInLine(lineDiv, caret + closer.length + (needsSpace ? 1 : 0));
       renderAll();
       pushUndo();
       return;
